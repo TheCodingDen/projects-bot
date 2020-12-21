@@ -27,7 +27,6 @@ export default async (client: Discord.Client, reaction: Discord.MessageReaction,
     }
 
     // Check that preflights pass
-
     if (isNotSelf && isInSubmissionChannel && projectExists && isValidEmoji) {
       let member
 

@@ -8,6 +8,18 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
   const { guild, channel, user, reaction } = discordData
   const { success, reason, project } = result
 
+  const logChannelId = process.env.PROJECT_LOG_CHANNEL
+
+  if (!logChannelId) {
+    throw new Error('Project log channel not set')
+  }
+
+  const logChannel = channel.client.channels.cache.get(logChannelId)
+
+  if (!logChannel || logChannel.type !== 'text') {
+    throw new Error(`Could not fetch log channel (channelID=${logChannelId}, is text?=${logChannel && logChannel.type === 'text'})`)
+  }
+
   // Alert of errors during the vote process
   if (!success || !project) {
     log.error(`Could not register ${user.id}'s vote for project ${project?.name} (${project?.id}): ${reason}`)
@@ -32,7 +44,8 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
     log.info(`Project ${project.name} (${project.id}) was ${wasApproved ? 'approved' : 'rejected'} with ${staffVotes.up + veteranVotes.up} upvotes [Staff/vet spread: ${staffVotes.up} | ${veteranVotes.up}] and ${staffVotes.down + veteranVotes.down} downvotes [Staff/vet spread: ${staffVotes.down} | ${veteranVotes.down}]`)
 
     const voteSituation = `**Upvotes:** **${project.upvotes.staff}** staff, **${project.upvotes.veterans}** veterans\n**Downvotes:** **${project.downvotes.staff}** staff, **${project.downvotes.veterans}** veterans`
-    await safeSendMessage(channel, `${wasApproved ? '✅' : '❌'} Project **${project.name}** (${project.links.source}, ${project.id}) was **${wasApproved ? 'APPROVED' : 'REJECTED'}** by **${user.tag}** (${user.id}) with following vote situation:\n${voteSituation}`)
+    // we have to type cast here because logChannel can be any channel type. The type is checked above though.
+    await safeSendMessage(logChannel as Discord.TextChannel, `${wasApproved ? '✅' : '❌'} Project **${project.name}** (${project.links.source}, ID ${project.id}) was **${wasApproved ? 'APPROVED' : 'REJECTED'}** by **${user.tag}** (${user.id}) with following vote situation:\n${voteSituation}`)
 
     try {
       await reaction.message.delete({ reason: `Project ${wasApproved ? 'approved' : 'rejected'} by ${user.tag} (${user.id})` })
