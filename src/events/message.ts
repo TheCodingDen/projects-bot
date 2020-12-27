@@ -2,6 +2,7 @@ import Discord from 'discord.js'
 import safeSendMessage from '../utils/safeSendMessage'
 import parseGformsEmbed from '../parsers/googleFormsEmbed'
 import { checkForDuplicates, registerProject } from '../db'
+import { isEligibleForLicenseCheck, hasSPDXLicense } from '../utils/licenseCheck'
 
 export default async (client: Discord.Client, message: Discord.Message): Promise<Discord.Message | undefined> => {
   const { channel } = message
@@ -31,6 +32,19 @@ export default async (client: Discord.Client, message: Discord.Message): Promise
       } catch (err) {
         log.error(`Parsing of submission ${message.id} failed: ${err}`)
         return await safeSendMessage(channel, `⚠️ Could not parse submission: ${err.message} (Parser error)`)
+      }
+
+      // Check for license
+      if (isEligibleForLicenseCheck(submission)) {
+        try {
+          if (!(await hasSPDXLicense(submission))) {
+            log.warn(`No license detected for project ${submission.name} with source link ${submission.links.source} (Submission ${message.id})`)
+            await safeSendMessage(channel, '⚠️ Submission appears to be missing a valid license. Review recommended.')
+          }
+        } catch (err) {
+          log.error(`License check for submission ${message.id} failed: ${err}`)
+          return await safeSendMessage(channel, '⚠️ Could not check submission for license, possibly some network failure? (Network error)')
+        }
       }
 
       // Perform duplicate check

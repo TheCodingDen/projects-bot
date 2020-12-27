@@ -3,7 +3,6 @@ import nedb from 'nedb-promises'
 import Discord from 'discord.js'
 import { ProjectSubmission, Project, VoteModificationResult } from '../typings/interfaces'
 import hasEnoughVotes from '../voting/modifyVotes'
-
 let db: nedb
 
 try {
