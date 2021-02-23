@@ -2,7 +2,6 @@ import { ProjectSubmission } from '../typings/interfaces'
 import { GraphQLClient, gql } from 'graphql-request'
 
 const ghClient = new GraphQLClient('https://api.github.com/graphql')
-ghClient.setHeader('Authorization', `Bearer ${process.env.GITHUB_TOKEN}`)
 
 export function isEligibleForLicenseCheck (submission: ProjectSubmission): boolean {
   return submission.links.source.includes('github.com')
@@ -21,7 +20,11 @@ export async function hasSPDXLicense (submission: ProjectSubmission): Promise<bo
     }
     `
 
-  const licenseData = await ghClient.request(ghQuery, { url: submission.links.source })
+  const licenseData = await ghClient.request(
+    ghQuery,
+    { url: submission.links.source },
+    { authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
+  )
 
   return !!(licenseData)?.resource?.licenseInfo
 }
