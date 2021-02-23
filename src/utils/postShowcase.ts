@@ -14,7 +14,7 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
     throw new Error('Project log channel not set')
   }
 
-  const logChannel = channel.client.channels.cache.get(logChannelId)
+  const logChannel = channel.client.channels.cache.get(logChannelId) as Discord.TextChannel
 
   if (!logChannel || logChannel.type !== 'text') {
     throw new Error(`Could not fetch log channel (channelID=${logChannelId}, is text?=${logChannel && logChannel.type === 'text'})`)
@@ -33,7 +33,7 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
 
   if (isPause) {
     log.info(`Voting on project ${project.name} (${project.id}) was ${wasPaused ? 'suspended' : 'unsuspended'} by user ${user.id} (${user.tag})`)
-    await safeSendMessage(channel, `⏯️ Voting on project **${project.name}** (${project.id}) was **${wasPaused ? 'SUSPENDED' : 'UNSUSPENDED'}** by **${user.tag}** (${user.id}).`)
+    await safeSendMessage(logChannel, `⏯️ Voting on project **${project.name}** (${project.id}) was **${wasPaused ? 'SUSPENDED' : 'UNSUSPENDED'}** by **${user.tag}** (${user.id}).`)
   }
 
   // If project was approved/rejected, log such and (try to) delete submission post
@@ -45,7 +45,7 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
 
     const voteSituation = `**Upvotes:** **${project.upvotes.staff}** staff, **${project.upvotes.veterans}** veterans\n**Downvotes:** **${project.downvotes.staff}** staff, **${project.downvotes.veterans}** veterans`
     // we have to type cast here because logChannel can be any channel type. The type is checked above though.
-    await safeSendMessage(logChannel as Discord.TextChannel, `${wasApproved ? '✅' : '❌'} Project **${project.name}** (${project.links.source}, ID ${project.id}) was **${wasApproved ? 'APPROVED' : 'REJECTED'}** by **${user.tag}** (${user.id}) with following vote situation:\n${voteSituation}`)
+    await safeSendMessage(logChannel, `${wasApproved ? '✅' : '❌'} Project **${project.name}** (${project.links.source}, ID ${project.id}) was **${wasApproved ? 'APPROVED' : 'REJECTED'}** by **${user.tag}** (${user.id}) with following vote situation:\n${voteSituation}`)
 
     try {
       await reaction.message.delete({ reason: `Project ${wasApproved ? 'approved' : 'rejected'} by ${user.tag} (${user.id})` })
