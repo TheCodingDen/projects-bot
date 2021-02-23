@@ -1,7 +1,7 @@
 import Discord from 'discord.js'
 import safeSendMessage from '../utils/safeSendMessage'
 import { getProject, adjustUpvotesForProject, adjustDownvotesForProject, suspendVotingForProject } from '../db'
-import showcase from '../utils/postShowcase'
+import processReaction from '../utils/processReaction'
 import { ShowcaseDiscordData, ShowcaseData } from '../typings/interfaces'
 import * as reactionPrereqs from '../utils/reactionPrereqs'
 
@@ -10,10 +10,6 @@ export default async (client: Discord.Client, reaction: Discord.MessageReaction,
   if (reaction.message.guild) {
     const { id, channel, guild } = reaction.message
     const { emoji } = reaction
-
-    const isNotSelf = reactionPrereqs.isNotSelf(client, user)
-    const isInSubmissionChannel = reactionPrereqs.isInSubmissionChannel(channel)
-    const isValidEmoji = reactionPrereqs.isValidEmoji(reaction)
 
     // Check that project exists
 
@@ -26,7 +22,7 @@ export default async (client: Discord.Client, reaction: Discord.MessageReaction,
     }
 
     // Check that preflights pass
-    if (isNotSelf && isInSubmissionChannel && projectExists && isValidEmoji) {
+    if (reactionPrereqs.allPass(client, user, channel, reaction) && projectExists) {
       let member
 
       // Get reacting member
@@ -68,10 +64,10 @@ export default async (client: Discord.Client, reaction: Discord.MessageReaction,
       }
 
       try {
-        await showcase(discordInput, input)
+        await processReaction(discordInput, input)
       } catch (err) {
-        log.error(`Got error during showcase approval process: ${err}`) // Not logging more here as more detailed logs will come from downstream
-        return await safeSendMessage(channel, '⚠️ Showcase approval process failed. (Internal error)')
+        log.error(`Got error during reaction addition process: ${err}`) // Not logging more here as more detailed logs will come from downstream
+        return await safeSendMessage(channel, '⚠️ Got error during reaction addition process. (Internal error)')
       }
     }
   }
