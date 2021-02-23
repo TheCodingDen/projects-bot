@@ -18,3 +18,12 @@ export function isValidEmoji (reaction: Discord.MessageReaction): boolean {
       return false
   }
 }
+
+export function allPass (
+  client: Discord.Client,
+  user: Discord.User,
+  channel: Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel,
+  reaction: Discord.MessageReaction
+): boolean {
+  return isNotSelf(client, user) && isInSubmissionChannel(channel) && isValidEmoji(reaction)
+}
