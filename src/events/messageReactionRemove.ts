@@ -3,6 +3,7 @@ import safeSendMessage from '../utils/safeSendMessage'
 import { getProject, adjustUpvotesForProject, adjustDownvotesForProject, suspendVotingForProject } from '../db'
 import showcase from '../utils/postShowcase'
 import { ShowcaseDiscordData, ShowcaseData } from '../typings/interfaces'
+import * as reactionPrereqs from '../utils/reactionPrereqs'
 
 export default async (client: Discord.Client, reaction: Discord.MessageReaction, user: Discord.User): Promise<Discord.Message | undefined> => {
   // Ensure reaction was not added in DM, even though the ID check would already technically speaking prevent this
@@ -10,11 +11,9 @@ export default async (client: Discord.Client, reaction: Discord.MessageReaction,
     const { id, channel, guild } = reaction.message
     const { emoji } = reaction
 
-    const isNotSelf = user.id !== client.user?.id
-    const isInSubmissionChannel = channel.id === process.env.PROJECT_SUBMISSIONS_CHANNEL
-    const isValidEmoji = emoji.id === process.env.UPVOTE_REACTION ||
-      emoji.id === process.env.DOWNVOTE_REACTION ||
-      emoji.name === process.env.PAUSE_REACTION
+    const isNotSelf = reactionPrereqs.isNotSelf(client, user)
+    const isInSubmissionChannel = reactionPrereqs.isInSubmissionChannel(channel)
+    const isValidEmoji = reactionPrereqs.isValidEmoji(reaction)
 
     let projectExists
 
@@ -41,7 +40,7 @@ export default async (client: Discord.Client, reaction: Discord.MessageReaction,
       }
 
       const isUpvote = emoji.id === process.env.UPVOTE_REACTION
-      const isPause = emoji.name === process.env.PAUSE_REACTION
+      const isPause = emoji.id === process.env.PAUSE_REACTION
 
       let result
       if (isUpvote) {
