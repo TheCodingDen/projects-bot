@@ -24,8 +24,8 @@ export async function checkForDuplicates (submission: ProjectSubmission): Promis
   return haveSameName.length > 0 || haveSameSource.length > 0
 }
 
-export async function registerProject (submission: ProjectSubmission): Promise<void> {
-  await db.insert({
+export async function registerProject (submission: ProjectSubmission, relatedMsgs: Discord.Snowflake[]): Promise<void> {
+  const project: Project = {
     upvotes: {
       staff: 0,
       veterans: 0
@@ -36,8 +36,10 @@ export async function registerProject (submission: ProjectSubmission): Promise<v
     },
     approved: false,
     rejected: false,
+    relatedMsgs: [],
     ...submission
-  })
+  }
+  await db.insert(project)
 }
 
 export async function getProject (id: Discord.Snowflake): Promise<Project | undefined> {

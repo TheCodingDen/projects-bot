@@ -53,6 +53,15 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
       log.error(`Could not delete submission post for ${project.name} (${project.id}): ${err}`)
       await safeSendMessage(channel, `⚠️ Could not delete project submission post. Please delete message ${project.id} manually. (Discord error)`)
     }
+
+    const projectSubmissionsChannelId = process.env.PROJECT_SUBMISSIONS_CHANNEL
+    if (projectSubmissionsChannelId) {
+      try {
+        await (guild.channels.cache.get(projectSubmissionsChannelId) as TextChannel | undefined)?.bulkDelete(project.relatedMsgs)
+      } catch (err) {
+        log.error(`Failed to delete messages related to ${project.name} (${project.id}): ${err}`)
+      }
+    }
   }
 
   // Post to public showcase

@@ -6,7 +6,7 @@ import { isEligibleForLicenseCheck, hasSPDXLicense } from '../utils/licenseCheck
 
 export default async (client: Discord.Client, message: Discord.Message): Promise<Discord.Message | undefined> => {
   const { channel } = message
-
+  const sentMsgs: Array<Discord.Message | undefined> = []
   // Ignore all messages sent outside of the webhook channel by anything else than the webhook
   const isInSubmissionChannel = channel.id === process.env.PROJECT_SUBMISSIONS_CHANNEL
   const isFromWebhook = message.webhookID === process.env.GOOGLE_FORMS_WEBHOOK_ID
@@ -15,12 +15,12 @@ export default async (client: Discord.Client, message: Discord.Message): Promise
     // Check that message contains embeds
     if (message.embeds.length === 0) {
       log.warn(`Submission ${message.id} contained no embeds, skipping`)
-      await safeSendMessage(channel, '⚠️ Could not register submission, message contained no embeds.')
+      sentMsgs.push(await safeSendMessage(channel, '⚠️ Could not register submission, message contained no embeds.'))
     } else {
       // Check that message contains only one embed
       if (message.embeds.length > 1) {
         log.warn(`Detected anomalous amount of embeds in submission ${message.id}; expected 1, got ${message.embeds.length} - selecting embed at index 0`)
-        await safeSendMessage(channel, '⚠️ Submission contains more than one embed. Selecting first and ignoring subsequent ones.')
+        sentMsgs.push(await safeSendMessage(channel, '⚠️ Submission contains more than one embed. Selecting first and ignoring subsequent ones.'))
       }
 
       // Attempt to parse GForms embed
@@ -39,7 +39,7 @@ export default async (client: Discord.Client, message: Discord.Message): Promise
         try {
           if (!(await hasSPDXLicense(submission))) {
             log.warn(`No license detected for project ${submission.name} with source link ${submission.links.source} (Submission ${message.id})`)
-            await safeSendMessage(channel, '⚠️ Submission appears to be missing a valid license. Review recommended.')
+            sentMsgs.push(await safeSendMessage(channel, '⚠️ Submission appears to be missing a valid license. Review recommended.'))
           }
         } catch (err) {
           log.error(`License check for submission ${message.id} failed: ${err}`)
@@ -60,7 +60,7 @@ export default async (client: Discord.Client, message: Discord.Message): Promise
 
       if (isDuplicate) {
         log.warn(`Duplicate detected for project ${submission.name} with source link ${submission.links.source} (Submission ${message.id})`)
-        await safeSendMessage(channel, '⚠️ Submission appears to be a duplicate (one or more projects with same name and/or source link found). Review recommended.')
+        sentMsgs.push(await safeSendMessage(channel, '⚠️ Submission appears to be a duplicate (one or more projects with same name and/or source link found). Review recommended.'))
       }
 
       // Add reactions
@@ -87,7 +87,7 @@ export default async (client: Discord.Client, message: Discord.Message): Promise
       // If everything went flawlessly, register project
 
       try {
-        await registerProject(submission)
+        await registerProject(submission, sentMsgs.filter((msg): msg is Discord.Message => msg !== undefined).map(msg => msg.id))
         log.info(`Project ${submission.name} (${message.id}) registered for voting.`)
       } catch (err) {
         log.error(`Project registration for submission ${message.id} failed: ${err}`)

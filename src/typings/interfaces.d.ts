@@ -32,6 +32,7 @@ export interface Project {
     source: string
     other: string
   }
+  relatedMsgs: Discord.Snowflake[]
   paused?: boolean
 }
 
