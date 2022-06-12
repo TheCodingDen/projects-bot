@@ -4,7 +4,7 @@ export function isNotSelf (client: Discord.Client, user: Discord.User): boolean 
   return user.id !== client.user?.id
 }
 
-export function isInSubmissionChannel (channel: Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel): boolean {
+export function isInSubmissionChannel (channel: Discord.TextBasedChannel): boolean {
   return channel.id === process.env.PROJECT_SUBMISSIONS_CHANNEL
 }
 
@@ -22,7 +22,7 @@ export function isValidEmoji (reaction: Discord.MessageReaction): boolean {
 export function allPass (
   client: Discord.Client,
   user: Discord.User,
-  channel: Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel,
+  channel: Discord.TextBasedChannel,
   reaction: Discord.MessageReaction
 ): boolean {
   return isNotSelf(client, user) && isInSubmissionChannel(channel) && isValidEmoji(reaction)

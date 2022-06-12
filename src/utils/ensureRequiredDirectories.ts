@@ -9,7 +9,7 @@ export default (): void => {
     fs.ensureDirSync(logPath)
     fs.ensureDirSync(dbPath)
   } catch (err) {
-    log.error(`Ensuring of required log and data directories failed: ${err.message}`)
+    log.error(`Ensuring of required log and data directories failed: ${err}`)
     log.error('Exiting...')
     process.exit(1)
   }

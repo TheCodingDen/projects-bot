@@ -16,8 +16,8 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
 
   const logChannel = channel.client.channels.cache.get(logChannelId) as Discord.TextChannel
 
-  if (!logChannel || logChannel.type !== 'text') {
-    throw new Error(`Could not fetch log channel (channelID=${logChannelId}, is text?=${logChannel && logChannel.type === 'text'})`)
+  if (!logChannel || !logChannel.isText()) {
+    throw new Error(`Could not fetch log channel (channelID=${logChannelId})`)
   }
 
   // Alert of errors during the vote process
@@ -48,7 +48,10 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
     await safeSendMessage(logChannel, `${wasApproved ? '✅' : '❌'} Project **${project.name}** (${project.links.source}, ID ${project.id}) was **${wasApproved ? 'APPROVED' : 'REJECTED'}** by **${user.tag}** (${user.id}) with following vote situation:\n${voteSituation}`)
 
     try {
-      await reaction.message.delete({ reason: `Project ${wasApproved ? 'approved' : 'rejected'} by ${user.tag} (${user.id})` })
+      await reaction.message.delete(
+        // FIXME: Set audit log reason?
+        /* { reason: `Project ${wasApproved ? 'approved' : 'rejected'} by ${user.tag} (${user.id})` } */
+      )
     } catch (err) {
       log.error(`Could not delete submission post for ${project.name} (${project.id}): ${err}`)
       await safeSendMessage(channel, `⚠️ Could not delete project submission post. Please delete message ${project.id} manually. (Discord error)`)
@@ -71,16 +74,14 @@ export default async (discordData: ShowcaseDiscordData, internalData: ShowcaseDa
         throw new Error(`Project showcase channel ID not set, got ${process.env.PROJECT_SHOWCASE_CHANNEL}`)
       }
 
-      // Having to type cast here and just separately check that this channel has a send method
-      // FWIW, this seems to indeed be the official recommended method by the discord.js development team: https://github.com/discordjs/discord.js/issues/3622#issuecomment-565566337
-      const showcaseChannel = guild.channels.cache.get(process.env.PROJECT_SHOWCASE_CHANNEL) as TextChannel
+      const showcaseChannel = guild.channels.cache.get(process.env.PROJECT_SHOWCASE_CHANNEL)
 
-      if (!showcaseChannel || !showcaseChannel.send) {
+      if (!showcaseChannel || !showcaseChannel.isText()) {
         throw new Error('Project showcase channel not found in cache or is not a text channel, possible configuration error')
       }
 
       const embed = createProjectEmbed(project, guild)
-      await showcaseChannel.send(null, embed)
+      await showcaseChannel.send({ embeds: [embed] })
       log.info(`Project ${project.name} (${project.id}) posted to showcase channel.`)
     } catch (err) {
       log.error(`Could not post project ${project.name} (${project.id}) to showcase channel: ${err}`)

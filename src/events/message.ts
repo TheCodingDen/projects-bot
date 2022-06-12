@@ -6,10 +6,11 @@ import { isEligibleForLicenseCheck, hasSPDXLicense } from '../utils/licenseCheck
 
 export default async (client: Discord.Client, message: Discord.Message): Promise<Discord.Message | undefined> => {
   const { channel } = message
+
   const sentMsgs: Array<Discord.Message | undefined> = []
   // Ignore all messages sent outside of the webhook channel by anything else than the webhook
   const isInSubmissionChannel = channel.id === process.env.PROJECT_SUBMISSIONS_CHANNEL
-  const isFromWebhook = message.webhookID === process.env.GOOGLE_FORMS_WEBHOOK_ID
+  const isFromWebhook = message.webhookId === process.env.GOOGLE_FORMS_WEBHOOK_ID
 
   if (isInSubmissionChannel && isFromWebhook) {
     // Check that message contains embeds
@@ -31,7 +32,7 @@ export default async (client: Discord.Client, message: Discord.Message): Promise
         submission = parseGformsEmbed(message)
       } catch (err) {
         log.error(`Parsing of submission ${message.id} failed: ${err}`)
-        return await safeSendMessage(channel, `⚠️ Could not parse submission: ${err.message} (Parser error)`)
+        return await safeSendMessage(channel, `⚠️ Could not parse submission: ${(err as Error).message} (Parser error)`)
       }
 
       // Check for license

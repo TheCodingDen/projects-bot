@@ -13,7 +13,7 @@ export default (message: Discord.Message): ProjectSubmission => {
     if (!process.env.GOOGLE_FORMS_WEBHOOK_FIELD_MAP) throw new Error('field map not set')
     fieldMap = JSON.parse(process.env.GOOGLE_FORMS_WEBHOOK_FIELD_MAP)
   } catch (err) {
-    throw new Error(`Google Forms webhook field map ${err.message === 'field map not set' ? 'not set' : 'has invalid format'}`)
+    throw new Error(`Google Forms webhook field map ${(err as Error).message === 'field map not set' ? 'not set' : 'has invalid format'}`)
   }
 
   if (fields.length !== fieldMap.length) throw new Error(`Field amount mismatch; expected ${fieldMap.length}, got ${fields.length}`)

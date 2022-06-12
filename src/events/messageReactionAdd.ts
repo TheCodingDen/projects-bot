@@ -9,6 +9,7 @@ export default async (client: Discord.Client, reaction: Discord.MessageReaction,
   // Ensure reaction was not added in DM, even though the ID check would already technically speaking prevent this
   if (reaction.message.guild) {
     const { id, channel, guild } = reaction.message
+
     const { emoji } = reaction
 
     // Check that project exists

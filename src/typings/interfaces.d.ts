@@ -52,7 +52,7 @@ export interface ShowcaseData {
 
 export interface ShowcaseDiscordData {
   guild: Discord.Guild
-  channel: Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel
+  channel: Discord.TextBasedChannel
   user: Discord.User
   reaction: Discord.MessageReaction
 }
