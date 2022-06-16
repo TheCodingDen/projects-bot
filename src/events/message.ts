@@ -1,5 +1,6 @@
 import Discord from 'discord.js'
 import safeSendMessage from '../utils/safeSendMessage'
+import createReviewThread from '../utils/createReviewThread'
 import parseGformsEmbed from '../parsers/googleFormsEmbed'
 import { checkForDuplicates, registerProject } from '../db'
 import { isEligibleForLicenseCheck, hasSPDXLicense } from '../utils/licenseCheck'
@@ -93,6 +94,17 @@ export default async (client: Discord.Client, message: Discord.Message): Promise
       } catch (err) {
         log.error(`Project registration for submission ${message.id} failed: ${err}`)
         return await safeSendMessage(channel, '⚠️ Project registration failed. (Database error)')
+      }
+
+      // Create review thread after registration
+
+      try {
+        await createReviewThread(submission, message, client)
+      } catch (err) {
+        log.error(`Failed to create review thread for project ${submission.id}.`)
+        log.error(err)
+
+        return await safeSendMessage(channel, `⚠️  Failed to create review thread for project ${submission.name}, please create the thread manually. (Discord error)`)
       }
     }
   }
