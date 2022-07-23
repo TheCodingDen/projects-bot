@@ -7,6 +7,8 @@
   },
   "parserOptions": {
     "project": "./tsconfig.json",
+    "ecmaVersion": "latest",
+    "createDefaultProgram": true, // Required for linting to work even on the test folder
     "ecmaFeatures": {
       "globalReturn": true,
       "jsx": true
@@ -15,9 +17,11 @@
   },
   "extends": "standard-with-typescript",
   "plugins": [
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "eslint-plugin-tsdoc"
   ],
   "rules": {
+    "tsdoc/syntax": "error",
     "no-void": "off",
     "@typescript-eslint/restrict-template-expressions": "off",
     "@typescript-eslint/strict-boolean-expressions": "off"

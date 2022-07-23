@@ -1,0 +1,19 @@
+{
+  "include": [
+    "**/*.ts",
+  ],
+  "compilerOptions": {
+    "target": "es2019",
+    "module": "none",
+    "types": [
+      "google-apps-script",
+    ],
+    "lib": [
+      "es2019",
+    ],
+    "rootDir": ".",
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "strict": true,
+  },
+}

@@ -1,25 +1,16 @@
-import { Client, Message } from 'discord.js'
-import { ProjectSubmission } from '../typings/interfaces'
-import safeSendMessage from './safeSendMessage'
+import { Message, Snowflake } from 'discord.js'
+import { Result } from 'ts-results'
+import { ResolvedSubmission } from '../models/schema/submission'
 
-function createReviewContent (submission: ProjectSubmission): string {
-  return `
-**${submission.name}**
+/**
+ * Creates a review thread in the private review channel.
+ */
+export default async (submission: ResolvedSubmission, submissionMessage: Message): Promise<Result<Snowflake, Error>> => {
+  return await Result.wrapAsync(async () => {
+    const thread = await submissionMessage.startThread({
+      name: submission.details.name
+    })
 
-${submission.description}
-
-Creator: ${submission.author} <@!${submission.author}>
-Sources: <${submission.links.source}>
-Other: ${submission.links.other}
-`
-}
-
-export default async (submission: ProjectSubmission, submissionMessage: Message, client: Client): Promise<void> => {
-  const content = createReviewContent(submission)
-
-  const thread = await submissionMessage.startThread({
-    name: submission.name
+    return thread.id
   })
-
-  void await safeSendMessage(thread, content)
 }

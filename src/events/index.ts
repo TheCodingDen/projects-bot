@@ -1,12 +1,13 @@
-import { ClientEvents } from 'discord.js'
+import { Awaitable, ClientEvents } from 'discord.js'
 import ready from './ready'
-import messageCreate from './message'
 import messageReactionAdd from './messageReactionAdd'
 import messageReactionRemove from './messageReactionRemove'
+import { ProjectsClient } from '../client'
+import { Result } from 'ts-results'
 
-const events: { [key in keyof ClientEvents]?: Function } = {
+type Events = { [key in keyof ClientEvents]?: (client: ProjectsClient, ...args: any[]) => Awaitable<Result<void, Error>> }
+const events: Events = {
   ready,
-  messageCreate,
   messageReactionAdd,
   messageReactionRemove
 }

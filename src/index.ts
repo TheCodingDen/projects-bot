@@ -1,31 +1,39 @@
 import dotenv from 'dotenv-safe'
-import Discord, { Client, Intents } from 'discord.js'
-import * as logger from './utils/logger'
+import { Intents } from 'discord.js'
 import eventHandlers from './events'
-import ensureRequiredDirectories from './utils/ensureRequiredDirectories'
+import { ProjectsClient } from './client'
+import { log } from './utils/logger'
+import { Result } from 'ts-results'
 
-global.log = logger.init()
 dotenv.config()
-ensureRequiredDirectories()
 
-const client = new Client({
+const client = new ProjectsClient({
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS]
 })
 
-for (const event in eventHandlers) {
-  // Have to do this here because type annotations can't be set for left-hand side ops in loops
-  const currentEvent = event as keyof Discord.ClientEvents
-  const currentEventHandler = eventHandlers[currentEvent]
+for (const [event, handler] of Object.entries(eventHandlers)) {
+  client.on(
+    event,
+    async (...args) => {
+      const res = await Result.wrapAsync(async () => await handler(client, ...args))
 
-  // Have to check for undefined here to stop TS screeching that the function might be undefined
-  // Which in turn happens due to the black magic typecasting I have to do in order to get plug-and-play event handler imports working
-  if (currentEventHandler) {
-    client.on(
-      currentEvent,
-      (...params) => currentEventHandler(client, ...params)
-    )
-  }
+      if (res.err) {
+        log.error(`Encountered unexpected error in event handler ${handler}`)
+        log.error(res.val)
+      }
+    }
+  )
+
+  log.debug(`Registered event listener ${event}`)
 }
 
-void client.login(process.env.DISCORD_CLIENT_TOKEN)
+// Load the commands from file
+client.commands.init()
+
+// TODO: use top level await if / when we switch to ESM
+// After login, register them, we need the client ID so we need to wait for login
+void client.login(client.config.botSettings().token)
+  // Don't bother catching here, if this goes wrong we have to abort anyways
+  // It will throw into the top level and the logs can detail what we were doing at the time
+  .then(async () => await client.commands.registerCommands())

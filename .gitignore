@@ -12,3 +12,13 @@ logs
 
 # Database
 data
+
+# IDEA files
+.idea/
+
+# ESLint cache
+.eslintcache
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
