@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "concurrently -k -p \"[{name}]\" -n \"TS,NODE\" \"npm:build:watch\" \"npm:bot:watch\"",
-    "bot:watch": "NODE_ENV=development nodemon -q -w lib/ lib/index.js | pino-pretty",
+    "bot:watch": "NODE_ENV=development nodemon -q -w lib/ lib/src/index.js | pino-pretty",
     "build": "tsc",
     "build:watch": "tsc -w --preserveWatchOutput",
     "build:ci": "prisma generate && tsc",
