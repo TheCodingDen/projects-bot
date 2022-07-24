@@ -102,7 +102,8 @@ export class Submission extends Model<ResolvedSubmission> {
     return this.state === 'PROCESSING'
   }
 
-  setRejected (/* TODO: reasons */): void { this._data.details.state = 'REJECTED' }
+  setRejected (): void { this._data.details.state = 'REJECTED' }
+  setDeleted (): void { this._data.details.state = 'DELETED' }
   setApproved (): void { this._data.details.state = 'APPROVED' }
 
   setPaused (): void { this._data.details.state = 'PAUSED' }

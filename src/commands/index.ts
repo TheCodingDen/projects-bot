@@ -1,4 +1,5 @@
 import { Command } from '../managers/commands'
+import cleanup from './cleanup'
 import create from './create'
 import draft from './draft'
 import edit from './edit'
@@ -10,5 +11,6 @@ export const commands: readonly Command[] = [
   reject,
   create,
   help,
-  draft
+  draft,
+  cleanup
 ] as const

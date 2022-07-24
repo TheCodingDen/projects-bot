@@ -255,7 +255,7 @@ export async function unsuspend (submission: Submission, vote: Vote, client: Pro
   return { outcome: 'ok', reason: '' }
 }
 
-export async function submissionCleanup (submission: Submission, client: ProjectsClient, action: 'accepted' | 'denied'): Promise<void> {
+export async function submissionCleanup (submission: Submission, client: ProjectsClient, action: 'accepted' | 'denied' | 'cleanup'): Promise<void> {
   const { privateSubmission } = client.config.channels()
 
   const deleteRes = await Result.wrapAsync(async () => await submission.message.delete())
@@ -292,10 +292,10 @@ export async function submissionCleanup (submission: Submission, client: Project
   })
 
   if (threadRes.err) {
-    log.error(`Failed to delete private review thread for submission ${submission}`)
+    log.error(`Failed to archive private review thread for submission ${submission}`)
     log.error(threadRes.val)
 
-    void client.communication.reportError(`Could not delete review thread <#${threadId}> due to Discord API error.`, submission)
+    void client.communication.reportError(`Could not archive review thread <#${threadId}> due to Discord API error.`, submission)
   }
 }
 
