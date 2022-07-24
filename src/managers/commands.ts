@@ -9,6 +9,9 @@ import { Routes } from 'discord-api-types/v9'
 import { isStaff, isVeteran } from '../utils/member'
 import { Result } from 'ts-results'
 import { Submission } from '../models/submission'
+import { getCustomIdAdapters } from '../utils/custom-id'
+
+const { from: fromCustomId } = getCustomIdAdapters()
 
 export type PermissionLevel = 'veterans' | 'staff'
 
@@ -173,7 +176,16 @@ export class CommandsManager extends Manager {
   }
 
   private async handleModalSubmit (interaction: ModalSubmitInteraction<'cached'>): Promise<void> {
-    const [commandName, submissionId] = interaction.customId.split('|')
+    const idRes = fromCustomId(interaction.customId)
+
+    if (idRes.err) {
+      log.error(`Interaction was provided with invalid customId \`${interaction.customId}\``)
+      log.error(idRes.err)
+
+      throw idRes.val
+    }
+
+    const { name: commandName, id: submissionId } = idRes.val
 
     const cmd = this.commands.get(commandName)
 

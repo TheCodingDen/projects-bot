@@ -1,10 +1,18 @@
 import { CommandInteraction, MessageActionRow, Modal, ModalSubmitInteraction, TextInputComponent } from 'discord.js'
-import { Ok, Err, Result } from 'ts-results'
+import Joi from 'joi'
+import { Err, Ok, Result } from 'ts-results'
 import { Command } from '../managers/commands'
 import { Submission } from '../models/submission'
 import { assert } from '../utils/assert'
+import { getCustomIdAdapters } from '../utils/custom-id'
 import { embeds } from '../utils/embeds'
 import { getRelevantSubmission, submissionNameAutocompleteProvider, submissionNameStringOption } from './utils'
+
+type EditType = 'name' | 'description' | 'source' | 'other' | 'technologies'
+
+const { from: fromCustomId, to: toCustomId } = getCustomIdAdapters<{type: EditType}>({
+  type: Joi.string().valid('name', 'description', 'source', 'other', 'technologies').required()
+})
 
 const edit: Command = {
   name: 'edit',
@@ -47,7 +55,11 @@ const edit: Command = {
     const newData = interaction.fields.getTextInputValue('newData')
     const type = extractType(interaction)
 
-    submission.updateValue(type, newData)
+    if (type.err) {
+      return Err(type.val)
+    }
+
+    submission.updateValue(type.val, newData)
 
     const updateRes = await client.submissions.update(submission)
 
@@ -77,7 +89,7 @@ const edit: Command = {
     }
 
     await interaction.reply({
-      content: `Edited the ${type} succesfully!`
+      content: `Edited the ${type.val} succesfully!`
     })
 
     return Ok.EMPTY
@@ -101,14 +113,11 @@ const edit: Command = {
   }
 }
 
-function extractType (interaction: ModalSubmitInteraction<'cached'>): 'name' | 'description' | 'source' | 'other' | 'technologies' {
-  const [,,type] = interaction.customId.split('|')
-
-  // Casting is OK, we control the types
-  return type as 'name' | 'description' | 'source' | 'other' | 'technologies'
+function extractType (interaction: ModalSubmitInteraction<'cached'>): Result<EditType, Error> {
+  return fromCustomId(interaction.customId).map(val => val.type)
 }
 
-function makeModal (submission: Submission, type: 'name' | 'description' | 'source' | 'other' | 'technologies'): Modal {
+function makeModal (submission: Submission, type: EditType): Modal {
   const existingData = {
     name: () => submission.name,
     description: () => submission.description,
@@ -119,7 +128,7 @@ function makeModal (submission: Submission, type: 'name' | 'description' | 'sour
 
   return new Modal()
     .setTitle(`Edit ${type}`)
-    .setCustomId(`edit|${submission.id}|${type}`)
+    .setCustomId(toCustomId({ name: 'edit', id: submission.id, type }))
     .addComponents(
       new MessageActionRow<TextInputComponent>()
         .addComponents(
@@ -136,8 +145,7 @@ function makeModal (submission: Submission, type: 'name' | 'description' | 'sour
 async function doEdit (submission: Submission, interaction: CommandInteraction<'cached'>): Promise<void> {
   assert(interaction.channel !== null, 'interaction came without a channel')
 
-  // Casting is OK, we control the types
-  const type = interaction.options.getSubcommand(true) as 'name' | 'description' | 'source' | 'other' | 'technologies'
+  const type = interaction.options.getSubcommand(true) as EditType
 
   await interaction.showModal(makeModal(submission, type))
 }

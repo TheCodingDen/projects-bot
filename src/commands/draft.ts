@@ -4,7 +4,10 @@ import { Err, Ok, Result } from 'ts-results'
 import { Command } from '../managers/commands'
 import { Submission } from '../models/submission'
 import { assert } from '../utils/assert'
+import { getCustomIdAdapters } from '../utils/custom-id'
 import { getRelevantSubmission, submissionNameAutocompleteProvider, submissionNameStringOption } from './utils'
+
+const { from: fromCustomId, to: toCustomId } = getCustomIdAdapters()
 
 const draft: Command = {
   name: 'draft',
@@ -26,7 +29,13 @@ const draft: Command = {
   shouldPublishGlobally: true,
   onAutocomplete: submissionNameAutocompleteProvider,
   onModalSubmit: async (client, interaction) => {
-    const [,submissionId] = interaction.customId.split('|')
+    const idRes = fromCustomId(interaction.customId)
+
+    if (idRes.err) {
+      return Err(idRes.val)
+    }
+
+    const { id: submissionId } = idRes.val
 
     const submissionRes = await client.submissions.fetch(submissionId)
 
@@ -80,7 +89,7 @@ function makeModal (submission: Submission): Modal {
 
   return new Modal()
     .setTitle(`Submit a new draft for ${submission.name}`)
-    .setCustomId(`draft|${submission.id}`)
+    .setCustomId(toCustomId({ name: 'draft', id: submission.id }))
     .addComponents(
       new MessageActionRow<TextInputComponent>()
         .addComponents(
