@@ -318,31 +318,30 @@ async function handleRejectionFeedback (submission: Submission, actioningVote: V
   }
 
   const getReviewerString = (): string => {
+    // Filter before we empty check so that the empty check is accurate
+    // Don't include the actioning voter, they're already here. Also don't include the bots
     const values = [...privateReviewThread.members.cache.values()]
+      .filter(m => m.id !== actioningVote.voter.id && !m.user?.bot)
 
     if (values.length === 0) {
-      return ''
+      return 'None'
     }
 
-    // Don't include the actioning voter, they're already here. Also don't include the bots
-    const members = values
-      .filter(m => m.id !== actioningVote.voter.id && !m.user?.bot)
+    return values
       .map(m => `<@${m.id}>`)
       .join(' ')
-
-    return `CC: ${members}`
   }
 
   // Callers should already have checked this
   assert(finalDraft !== undefined, 'no draft was set')
 
   const rejectionMessage =
-`<@${actioningVote.voter.id}>, please send the message belown to this thread:
+`
+Reviewers in thread: ${getReviewerString()}
+<@${actioningVote.voter.id}>, please send the message below to this thread:
 
 \`\`\`
 ${finalDraft.content}
-
-${getReviewerString()}
 \`\`\`
 `
 

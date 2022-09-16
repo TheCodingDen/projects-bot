@@ -1,4 +1,4 @@
-import { TextBasedChannel, User } from 'discord.js'
+import { TextBasedChannel } from 'discord.js'
 import { Err, Ok, Result } from 'ts-results'
 import { ProjectsClient } from '../client'
 import { ValidRejectionKey } from '../config'
@@ -56,7 +56,7 @@ const reject: Command = {
       name: submission.name
     })
 
-    const didSendRejection = await sendPrivateFeedback(client, submission, interaction.member.user, reason, reasonName)
+    const didSendRejection = await sendPrivateFeedback(client, submission, reason, reasonName)
 
     if (!didSendRejection) {
       await interaction.reply({
@@ -64,10 +64,10 @@ const reject: Command = {
       })
     }
 
-    // The last param forces the cleanup function to not run if the rejection message was not sent
+    // The last param forces the cleanup function to not run, as that would interfere with further messages we send to the channel
     // This is required because if we fail to send the rejection message, and the user has to do this manually
     // archiving the thread would make the message go away and would result in poor UX
-    await instantlyReject(submission, interaction.user, reasonName, client, didSendRejection)
+    await instantlyReject(submission, interaction.user, reasonName, client, false)
 
     await client.submissions.update(submission)
 
@@ -86,7 +86,7 @@ const reject: Command = {
   }
 }
 
-async function sendPrivateFeedback (client: ProjectsClient, submission: Submission, voter: User, content: string, reason: ValidRejectionKey): Promise<boolean> {
+async function sendPrivateFeedback (client: ProjectsClient, submission: Submission, content: string, reason: ValidRejectionKey): Promise<boolean> {
   const { publicFeedback } = client.config.channels()
 
   let channel: TextBasedChannel
@@ -96,7 +96,7 @@ async function sendPrivateFeedback (client: ProjectsClient, submission: Submissi
   } else {
     const channelRes = await Result.wrapAsync(async () => await publicFeedback.threads.create({
       name: submission.name,
-      type: 'GUILD_PRIVATE_THREAD'
+      type: client.config.botSettings().threadPrivacy
     }))
 
     if (channelRes.err) {
@@ -109,20 +109,17 @@ async function sendPrivateFeedback (client: ProjectsClient, submission: Submissi
     channel = channelRes.val
   }
 
-  const messageRes = await Result.wrapAsync(async () => await Promise.all([
-    channel.send({
+  const messageRes = await Result.wrapAsync(async () =>
+    await channel.send({
       content
-    }),
-    channel.send({
-      content: `CC <@${voter.id}}`
     })
-  ]))
+  )
 
   if (messageRes.err) {
     log.error('Failed to send messages to private feedback thread')
     log.error(messageRes.val)
 
-    return true
+    return false
   }
 
   return true

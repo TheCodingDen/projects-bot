@@ -181,7 +181,7 @@ const handler = async (apiSubmission: IncomingSubmissionData, client: ProjectsCl
 
   if (isDuplicate) {
     log.warn(`Duplicate detected for source link ${model.links.source} (${model})`)
-    void client.communication.reportWarning('Duplicate submission detected (one or more projects with the same name and / or repository link found), additional review recommended', model)
+    void client.communication.reportWarning('Duplicate submission detected (one or more projects with the same name and/or repository link found), additional review recommended', model)
   }
 
   const submissionAddRes = await client.submissions.add(model)

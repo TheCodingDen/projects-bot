@@ -281,10 +281,12 @@ export class CommandsManager extends Manager {
       log.error(`Unexpected error during execution of command ${cmd.name}`)
       log.error(cmdRes.val)
 
-      await interaction.followUp({
-        content: 'That command threw an unexpected error whilst executing, please report this.',
-        ephemeral: true
-      })
+      await Result.wrapAsync(async () =>
+        await interaction.followUp({
+          content: 'That command threw an unexpected error whilst executing, please report this.',
+          ephemeral: true
+        })
+      )
     }
   }
 }
