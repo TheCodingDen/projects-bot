@@ -93,7 +93,7 @@ export class ConfigManager extends Manager {
   nodeEnv = (): NodeEnv => this.getEnv('NODE_ENV', 'node env') as NodeEnv
 
   apiSettings = (): APISettings => ({
-    port: requireNotNaN(Number(this.getEnv('API_PORT', 'api port')), 'api port'),
+    port: requireNotNaN(Number(this.getEnv('PORT', 'api port')), 'api port'),
     authToken: this.getEnv('API_AUTH_KEY', 'api auth key')
   })
 
