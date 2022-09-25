@@ -30,9 +30,6 @@ export interface Command {
 
 type BuiltSlashCommand = ReturnType<SlashCommandBuilder['toJSON']>
 
-// TODO: move this into a config or something
-const shouldRegister = false
-
 export class CommandsManager extends Manager {
   private hasLoadedCommands = false
   private readonly commands = new Map<string, Command>()
@@ -73,7 +70,7 @@ export class CommandsManager extends Manager {
   async registerCommands (): Promise<void> {
     log.info(`Registering ${this.commands.size} slash commands with Discord`)
 
-    if (!shouldRegister) {
+    if (!this.client.config.botSettings().shouldRegisterSlashCommands) {
       log.info('Registration disabled, halting')
       return
     }
