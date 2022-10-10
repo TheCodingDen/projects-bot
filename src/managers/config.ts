@@ -41,6 +41,7 @@ interface BotSettings {
 interface Channels {
   publicShowcase: TextChannel
   publicFeedback: TextChannel
+  publicLog: TextChannel
 
   privateSubmission: TextChannel
   privateLog: TextChannel
@@ -110,6 +111,7 @@ export class ConfigManager extends Manager {
   channels = (): Channels => ({
     publicShowcase: this.getChannel(this.getEnv('PUBLIC_SHOWCASE_CHANNEL', 'public showcase'), 'public showcase'),
     publicFeedback: this.getChannel(this.getEnv('PUBLIC_FEEDBACK_CHANNEL', 'public feedback'), 'public feedback'),
+    publicLog: this.getChannel(this.getEnv('PUBLIC_LOG_CHANNEL', 'public log'), 'public log'),
 
     privateSubmission: this.getChannel(this.getEnv('PRIVATE_SUBMISSION_CHANNEL', 'private submission'), 'private submission'),
     privateLog: this.getChannel(this.getEnv('PRIVATE_LOG_CHANNEL', 'private logs'), 'private logs')

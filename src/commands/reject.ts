@@ -87,12 +87,12 @@ const reject: Command = {
 }
 
 async function sendPrivateFeedback (client: ProjectsClient, submission: Submission, content: string, reason: ValidRejectionKey): Promise<boolean> {
-  const { publicFeedback } = client.config.channels()
+  const { publicLog, publicFeedback } = client.config.channels()
 
   let channel: TextBasedChannel
 
   if (client.config.rejectionWhitelist().includes(reason)) {
-    channel = publicFeedback
+    channel = publicLog
   } else {
     const channelRes = await Result.wrapAsync(async () => await publicFeedback.threads.create({
       name: submission.name,

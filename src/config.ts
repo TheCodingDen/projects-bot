@@ -16,7 +16,7 @@ const descriptions = [
 
 const config = {
   rejection: {
-    // A whitelist of reasons we send to public review instead of thread
+    // A whitelist of reasons we send to the public logs instead of a private thread
     reviewWhitelist: ['invalid-id'],
     templates: {
       'no-license': ({ user }: RejectionTemplateParams) => `<@${user}>, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and resubmit. See <https://choosealicense.com/> for more information`,
