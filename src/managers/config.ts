@@ -131,7 +131,7 @@ export class ConfigManager extends Manager {
     token: this.getEnv('DISCORD_CLIENT_TOKEN', 'bot token'),
     // Public threads in dev because testing servers probably wont have nitro to support private threads
     threadPrivacy: this.nodeEnv() === 'development' ? 'GUILD_PUBLIC_THREAD' : 'GUILD_PRIVATE_THREAD',
-    shouldRegisterSlashCommands: Boolean(this.getEnv('SHOULD_REGISTER_SLASH_COMMANDS', 'should register slash commands'))
+    shouldRegisterSlashCommands: this.getEnv('SHOULD_REGISTER_SLASH_COMMANDS', 'should register slash commands') === 'true'
   })
 
   roles = (): Roles => ({

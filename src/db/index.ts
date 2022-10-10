@@ -29,5 +29,5 @@ export async function checkForDuplicates (submission: Submission, client: Projec
     return Err(haveSameSource.val)
   }
 
-  return Ok(haveSameName.val !== undefined || haveSameSource.val !== undefined)
+  return Ok(haveSameName.val !== null || haveSameSource.val !== null)
 }
