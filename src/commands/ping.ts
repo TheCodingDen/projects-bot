@@ -11,7 +11,9 @@ export default class PingCommand extends SlashCommand {
     })
   }
 
-  async run (ctx: CommandContext): Promise<string> {
-    return `Pong! WebSocket ping: ${client.ws.ping}ms`
+  async run (_ctx: CommandContext): Promise<string> {
+    const ping = client.ws.ping
+    logger.info(`Ping: ${ping}`)
+    return `Pong! WebSocket ping: ${ping}ms`
   }
 }

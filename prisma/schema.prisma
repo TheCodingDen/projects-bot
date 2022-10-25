@@ -2,10 +2,66 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+  PAUSE
+  UNPAUSE
+}
+
+enum VoteRole {
+  STAFF
+  VETERANS
+}
+
+enum SubmissionState {
+  RAW
+  WARNING
+  PROCESSING
+  PAUSED
+  ERROR
+  ACCEPTED
+  DENIED
+}
+
+model Submission {
+  id String @id @default(cuid())
+
+  messageId        String? @unique
+  reviewThreadId   String? @unique
+  feedbackThreadId String? @unique
+
+  name        String
+  description String
+  state       SubmissionState
+  authorId    String
+  submittedAt DateTime        @default(now())
+
+  techUsed    String
+  sourceLinks String
+  otherLinks  String
+
+  votes Vote[]
+}
+
+model Vote {
+  voterId String
+  type    VoteType
+  role    VoteRole
+
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  // Votes are identified by voter, submission and type
+  // It is not disallowed to have an upvote and a downvote at the same time
+  // Similarly, having votes alongside a pause is acceptable
+  @@id([voterId, submissionId, type])
 }
