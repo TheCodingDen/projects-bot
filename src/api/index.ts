@@ -144,7 +144,7 @@ server.post(
   }
 )
 
-export async function setup () {
+export async function setup (): Promise<void> {
   try {
     await server.listen({ port: config.api().port })
 

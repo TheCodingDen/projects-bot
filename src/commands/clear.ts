@@ -42,8 +42,8 @@ export default class ClearCommand extends SlashCommand {
       const validated = await validatePendingSubmission(submission)
 
       validated.state = 'PROCESSING'
-      updateSubmissionState(submission, 'PROCESSING')
-      updateMessage(validated.submissionMessage, createEmbed(validated))
+      await updateSubmissionState(submission, 'PROCESSING')
+      await updateMessage(validated.submissionMessage, createEmbed(validated))
 
       logger.debug('Clear complete.')
       commandLog.info('Cleared warnings successfully.', ctx, {

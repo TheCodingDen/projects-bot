@@ -1,7 +1,6 @@
 import assert from 'assert'
 import { SlashCommand, SlashCreator, CommandContext, CommandOptionType, ComponentType, TextInputStyle, ButtonStyle } from 'slash-create'
 import { commandLog } from '../communication/interaction'
-import config from '../config'
 import { createDraft, deleteDraft } from '../db/draft'
 import { Draft } from '../types/draft'
 import { ValidatedSubmission } from '../types/submission'
@@ -53,33 +52,32 @@ export default class DraftCommand extends SlashCommand {
     // This would be a Discord API failure
     assert(!!subcommand, 'subcommand was not set')
 
-    if (submission.state !== "PROCESSING") {
-      commandLog.warning("Cannot use drafts on a pending or paused submission, please resolve issues and retry.", ctx)
+    if (submission.state !== 'PROCESSING') {
+      commandLog.warning('Cannot use drafts on a pending or paused submission, please resolve issues and retry.', ctx)
       return
     }
 
     switch (subcommand) {
-      case "add":
+      case 'add':
         await this.addNewDraft(ctx, submission)
         return
-      case "view":
+      case 'view':
         await this.viewCurrentDraft(ctx, submission)
         return
-      case "clear":
+      case 'clear':
         await this.clearCurrentDraft(ctx, submission)
         return
-      case "history":
+      case 'history':
         await this.viewDraftHistory(ctx, submission)
-        return
     }
   }
 
-  async viewDraftHistory(ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
+  async viewDraftHistory (ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
     const drafts = submission.drafts.reverse()
     let currentIdx = 0
 
     if (!drafts.length) {
-      commandLog.info("No draft set.", ctx)
+      commandLog.info('No draft set.', ctx)
       return
     }
 
@@ -95,83 +93,79 @@ timestamp: ${draft.timestamp.toLocaleString()}
 
     await ctx.send({
       content: generateDraftString(drafts[0]),
-      components: [ 
+      components: [
         {
           type: ComponentType.ACTION_ROW,
           components: [
             {
               type: ComponentType.BUTTON,
-              custom_id: "previous",
-              label: "<= Previous",
+              custom_id: 'previous',
+              label: '<= Previous',
               style: ButtonStyle.PRIMARY
             },
             {
               type: ComponentType.BUTTON,
-              custom_id: "clear",
-              label: "Clear",
+              custom_id: 'clear',
+              label: 'Clear',
               style: ButtonStyle.DESTRUCTIVE
             },
             {
               type: ComponentType.BUTTON,
-              custom_id: "next",
-              label: "Next =>",
+              custom_id: 'next',
+              label: 'Next =>',
               style: ButtonStyle.PRIMARY
-            },
+            }
           ]
-        } 
+        }
       ]
     })
 
-
     const message = await ctx.fetch()
 
-    ctx.registerComponentFrom(message.id, "previous", bctx => {
+    ctx.registerComponentFrom(message.id, 'previous', bctx => {
       if (currentIdx === 0) {
         // Skip to last
         currentIdx = drafts.length - 1
-      } 
-      else {
+      } else {
         currentIdx -= 1
       }
 
-      bctx.acknowledge()
+      void bctx.acknowledge()
 
-      message.edit({
+      void message.edit({
         content: generateDraftString(drafts[currentIdx]),
         ...DEFAULT_MESSAGE_OPTS_SLASH
       })
     })
 
-    ctx.registerComponentFrom(message.id, "next", bctx => {
+    ctx.registerComponentFrom(message.id, 'next', bctx => {
       if (currentIdx === drafts.length - 1) {
         // Skip to front
         currentIdx = 0
-      }
-      else {
+      } else {
         currentIdx += 1
       }
 
-      bctx.acknowledge()
+      void bctx.acknowledge()
 
-      message.edit({
+      void message.edit({
         content: generateDraftString(drafts[currentIdx]),
         ...DEFAULT_MESSAGE_OPTS_SLASH
       })
     })
 
-
-    ctx.registerComponentFrom(message.id, "clear", bctx => {
-      message.delete()
+    ctx.registerComponentFrom(message.id, 'clear', () => {
+      void message.delete()
     })
   }
 
-  async clearCurrentDraft(ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
+  async clearCurrentDraft (ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
     // TODO: confirmation?
-    
+
     const hasDraft = submission.drafts.length > 0
 
     if (!hasDraft) {
-      commandLog.error("No draft set.", ctx)
+      commandLog.error('No draft set.', ctx)
       return
     }
 
@@ -181,10 +175,10 @@ timestamp: ${draft.timestamp.toLocaleString()}
     commandLog.info(`Deleted draft ${id}.`, ctx)
   }
 
-  async addNewDraft(ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
+  async addNewDraft (ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
     const oldValue = submission.drafts[0]?.content ?? `<@${submission.authorId}>, unfortunately, your project has been rejected.`
 
-    ctx.sendModal(
+    await ctx.sendModal(
       {
         title: `Draft rejection message for ${submission.name}`,
         components: [
@@ -193,7 +187,7 @@ timestamp: ${draft.timestamp.toLocaleString()}
             components: [
               {
                 type: ComponentType.TEXT_INPUT,
-                label: `Draft`,
+                label: 'Draft',
                 style: TextInputStyle.PARAGRAPH,
                 custom_id: 'new_value',
                 value: oldValue
@@ -202,7 +196,7 @@ timestamp: ${draft.timestamp.toLocaleString()}
           }
         ]
       },
-      async (mctx) => {
+      (mctx) => {
         const newValue = mctx.values.new_value
         logger.debug(
           `Adding draft ${newValue} to submission ${stringify.submission(
@@ -210,20 +204,20 @@ timestamp: ${draft.timestamp.toLocaleString()}
           )}`
         )
 
-        await createDraft(newValue, mctx.user.id, submission.id)
+        void createDraft(newValue, mctx.user.id, submission.id)
 
-        mctx.send({
-          content: "Added new draft successfully."
+        void mctx.send({
+          content: 'Added new draft successfully.'
         })
       }
     )
   }
 
-  async viewCurrentDraft(ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
-    const current = submission.drafts[0] 
+  async viewCurrentDraft (ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
+    const current = submission.drafts[0]
 
     if (!current) {
-      commandLog.info("No draft set", ctx)
+      commandLog.info('No draft set', ctx)
       return
     }
 

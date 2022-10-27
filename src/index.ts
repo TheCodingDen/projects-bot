@@ -47,7 +47,7 @@ creator.on('commandRegister', (command) =>
   logger.info(`Registered command ${command.commandName}`)
 )
 creator.on('commandError', (command, error) =>
-  logger.error(`Command ${command.commandName}: ${error}`)
+  logger.error(`Command ${command.commandName}: ${error.message} \n ${error.stack}`)
 )
 
 const OUR_BUTTONS = ['pause', 'upvote', 'downvote']
@@ -75,9 +75,9 @@ void (async () => {
     .registerCommandsIn(path.join(__dirname, 'commands'))
 
   // Event setup
-  client.on('interactionCreate', (ev) => {
+  client.on('interactionCreate', async (ev) => {
     if (ev.isButton() && ev.inCachedGuild() && OUR_BUTTONS.some(a => a === ev.component.customId)) {
-      handleButtonEvent(ev)
+      await handleButtonEvent(ev)
     }
   })
 
@@ -88,7 +88,7 @@ void (async () => {
   logger.info(`Logged in as ${client.user?.username ?? 'Unknown#0000'}`)
 
   logger.info('Starting backend API')
-  api.setup()
+  await api.setup()
 
   logger.info('Application setup complete.')
 })().catch(logger.error)

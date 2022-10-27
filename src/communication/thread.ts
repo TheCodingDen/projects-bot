@@ -4,7 +4,7 @@ import { DEFAULT_MESSAGE_OPTS_DJS } from '../utils/communication'
 import { runCatching } from '../utils/request'
 
 function genericLog (message: string, thread: ThreadChannel): void {
-  runCatching(async () =>
+  void runCatching(async () =>
     await thread.send({
       content: message,
       ...DEFAULT_MESSAGE_OPTS_DJS

@@ -1,13 +1,13 @@
-import { Snowflake } from "discord.js";
-import { SubmissionId as Cuid } from "../types/misc";
-import { query } from "./client";
+import { Snowflake } from 'discord.js'
+import { SubmissionId as Cuid } from '../types/misc'
+import { query } from './client'
 
-type DraftGeneratedData = {
-  timestamp: Date,
+interface DraftGeneratedData {
+  timestamp: Date
   id: string
 }
 
-export async function deleteDraft(id: Cuid): Promise<void> {
+export async function deleteDraft (id: Cuid): Promise<void> {
   return void query(db => db.draft.delete({
     where: {
       id
@@ -15,7 +15,7 @@ export async function deleteDraft(id: Cuid): Promise<void> {
   }))
 }
 
-export async function createDraft(content: string, authorId: Snowflake, submissionId: Cuid): Promise<DraftGeneratedData> {
+export async function createDraft (content: string, authorId: Snowflake, submissionId: Cuid): Promise<DraftGeneratedData> {
   const data = await query(db => db.draft.create({
     data: {
       content,

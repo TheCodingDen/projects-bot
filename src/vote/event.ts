@@ -80,7 +80,7 @@ export async function handleButtonEvent (
   )
 
   // You have a vote but you arent trying to pause or unpause
-  if (existingVote && (type !== "PAUSE" && type !== "UNPAUSE")) {
+  if (existingVote && (type !== 'PAUSE' && type !== 'UNPAUSE')) {
     if (existingVote.type !== type) {
       // Attempted to add an unrelated vote whilst already having one
       interactionLog.warning('You cannot add an upvote and a downvote.', event)
@@ -103,8 +103,8 @@ export async function handleButtonEvent (
 
   const hasDraft = submission.drafts[0] !== undefined
 
-  if (type === "DOWNVOTE" && voteRejectsProject(vote, submission) && !hasDraft) {
-    interactionLog.error("Cannot reject without a draft set", event) 
+  if (type === 'DOWNVOTE' && voteRejectsProject(vote, submission) && !hasDraft) {
+    interactionLog.error('Cannot reject without a draft set', event)
     return
   }
 

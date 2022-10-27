@@ -72,8 +72,8 @@ export async function pause (
   )
 
   submission.state = 'PAUSED'
-  updateSubmissionState(submission, 'PAUSED')
-  updateMessage(submission.submissionMessage, createEmbed(submission))
+  await updateSubmissionState(submission, 'PAUSED')
+  await updateMessage(submission.submissionMessage, createEmbed(submission))
 
   privateLog.info(`<@${vote.voter.id}> paused the submission.`, submission)
 
@@ -94,8 +94,8 @@ export async function unpause (
   )
 
   submission.state = 'PROCESSING'
-  updateSubmissionState(submission, 'PROCESSING')
-  updateMessage(submission.submissionMessage, createEmbed(submission))
+  await updateSubmissionState(submission, 'PROCESSING')
+  await updateMessage(submission.submissionMessage, createEmbed(submission))
 
   privateLog.info(`<@${vote.voter.id}> unpaused the submission.`, submission)
 
@@ -147,7 +147,7 @@ export async function reject (
 ): Promise<VoteModificationResult> {
   assert(vote.type === 'DOWNVOTE', `expected DOWNVOTE got ${vote.type}`)
   const draft = submission.drafts[0]
-  assert(!!draft, "cannot reject without a draft")
+  assert(!!draft, 'cannot reject without a draft')
 
   const reviewers = await submission.reviewThread.members.fetch()
   const formattedReviewers = reviewers.filter(v => !v.user?.bot).map(v => `<@${v.id}>`)

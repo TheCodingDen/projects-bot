@@ -13,7 +13,7 @@ function genericInteractionLog (
   assert(interaction.isRepliable(), 'Interaction was not repliable.')
 
   if (interaction.replied) {
-    runCatching(async () =>
+    void runCatching(async () =>
       await interaction.followUp({
         content: message,
         ...DEFAULT_MESSAGE_OPTS_DJS,
@@ -21,7 +21,7 @@ function genericInteractionLog (
       })
     )
   } else {
-    runCatching(async () =>
+    void runCatching(async () =>
       await interaction.reply({
         content: message,
         ...DEFAULT_MESSAGE_OPTS_DJS,
@@ -32,7 +32,7 @@ function genericInteractionLog (
 }
 
 function genericCommandLog (message: string, ctx: CommandContext, opts?: MessageOptions): void {
-  runCatching(async () =>
+  void runCatching(async () =>
     await ctx.send({
       content: message,
       ...DEFAULT_MESSAGE_OPTS_SLASH,

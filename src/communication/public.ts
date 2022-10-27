@@ -4,7 +4,7 @@ import { DEFAULT_MESSAGE_OPTS_DJS } from '../utils/communication'
 import { runCatching } from '../utils/request'
 
 function genericLog (message: string, submission: PendingSubmission | ValidatedSubmission): void {
-  runCatching(async () =>
+  void runCatching(async () =>
     await config.channels().publicLogs.send({
       content: `${message} (Submission: ${submission.name})`,
       ...DEFAULT_MESSAGE_OPTS_DJS

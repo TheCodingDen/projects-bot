@@ -18,9 +18,7 @@ export async function runCatching<T> (fn: () => Promise<T | undefined> | T | und
       msg = 'null'
     } else if (err instanceof DiscordAPIError) {
       msg = `API Error (${err.code}) on ${err.method} => ${err.url} \n ${err.stack}`
-    }
-    // Primitives
-    else if (
+    } else if (
       typeof err === 'string' ||
       typeof err === 'number' ||
       typeof err === 'bigint' ||

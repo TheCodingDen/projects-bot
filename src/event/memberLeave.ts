@@ -9,7 +9,7 @@ import {
 
 export async function handleMemberLeaveEvent (
   member: GuildMember | PartialGuildMember
-) {
+): Promise<void> {
   const submissions = await fetchSubmissionsByMemberId(member.id)
 
   for (const submission of submissions) {
@@ -36,7 +36,7 @@ export async function handleMemberLeaveEvent (
     await reviewThread.setArchived(true)
     await submissionMessage.delete()
 
-    updateSubmissionState(submission, 'DENIED')
+    await updateSubmissionState(submission, 'DENIED')
     privateLog.info(
       'Silently rejected submission because author left the guild.',
       submission

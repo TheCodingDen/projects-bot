@@ -61,7 +61,7 @@ export const stringify = {
 
   draft: (draft: Draft | undefined): string => {
     if (draft === undefined) {
-      return `Draft { undefined }`
+      return 'Draft { undefined }'
     }
 
     return `Draft { (id: ${draft.id}) (author: ${draft.author.id}) (timestamp: ${draft.timestamp.toLocaleString()})}`

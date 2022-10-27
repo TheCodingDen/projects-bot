@@ -5,7 +5,8 @@ import {
   CommandContext,
   CommandOptionType,
   ComponentType,
-  TextInputStyle
+  TextInputStyle,
+  ModalInteractionContext
 } from 'slash-create'
 import { commandLog } from '../communication/interaction'
 import {
@@ -17,7 +18,7 @@ import {
   updateTechnologies,
   validatePendingSubmission
 } from '../db/submission'
-import { ValidatedSubmission } from '../types/submission'
+import { PendingSubmission, ValidatedSubmission } from '../types/submission'
 import { fetchSubmissionForContext } from '../utils/commands'
 import { DEFAULT_MESSAGE_OPTS_SLASH } from '../utils/communication'
 import { getAssignedGuilds } from '../utils/discordUtils'
@@ -139,7 +140,7 @@ export default class EditCommand extends SlashCommand {
         assert(false, 'unreachable')
     }
 
-    ctx.sendModal(
+    await ctx.sendModal(
       {
         title: `Edit the ${subcommand} of ${submission.name}`,
         components: [
@@ -157,39 +158,49 @@ export default class EditCommand extends SlashCommand {
           }
         ]
       },
-      async (mctx) => {
-        const newValue = mctx.values.new_value
-        logger.debug(
-          `Setting ${subcommand} to ${newValue} from ${oldValue} on submission ${stringify.submission(
-            submission
-          )}`
-        )
-
-        // Wait for the update to complete
-        await updateFn(newValue)
-
-        // Already validated
-        if (submission.state !== 'WARNING' && submission.state !== 'ERROR') {
-          const validated = submission as ValidatedSubmission
-          updateMessage(validated.submissionMessage, createEmbed(submission))
-
-          mctx.send({
-            content: `Updated the ${subcommand} successfuly`,
-            ...DEFAULT_MESSAGE_OPTS_SLASH,
-            ephemeral: false
-          })
-          return
-        }
-
-        // Submission should be valid after calling updateFn
-        const validated = await validatePendingSubmission(submission)
-        updateMessage(validated.submissionMessage, createEmbed(submission))
-        mctx.send({
-          content: `Updated the ${subcommand} successfuly`,
-          ...DEFAULT_MESSAGE_OPTS_SLASH,
-          ephemeral: false
-        })
-      }
+      (mctx) =>
+        // Handled separately so we can use async/await without eslint complaining it wouldnt work because of argument types
+        void this.handleModal(mctx, subcommand, oldValue, submission, updateFn)
     )
+  }
+
+  async handleModal (
+    mctx: ModalInteractionContext,
+    subcommand: string,
+    oldValue: string,
+    submission: ValidatedSubmission | PendingSubmission,
+    updateFn: (val: string) => Promise<void> | void
+  ): Promise<void> {
+    const newValue = mctx.values.new_value
+    logger.debug(
+      `Setting ${subcommand} to ${newValue} from ${oldValue} on submission ${stringify.submission(
+        submission
+      )}`
+    )
+
+    // Wait for the update to complete
+    await updateFn(newValue)
+
+    // Already validated
+    if (submission.state !== 'WARNING' && submission.state !== 'ERROR') {
+      const validated = submission as ValidatedSubmission
+      await updateMessage(validated.submissionMessage, createEmbed(submission))
+
+      await mctx.send({
+        content: `Updated the ${subcommand} successfuly`,
+        ...DEFAULT_MESSAGE_OPTS_SLASH,
+        ephemeral: false
+      })
+      return
+    }
+
+    // Submission should be valid after calling updateFn
+    const validated = await validatePendingSubmission(submission)
+    await updateMessage(validated.submissionMessage, createEmbed(submission))
+    await mctx.send({
+      content: `Updated the ${subcommand} successfuly`,
+      ...DEFAULT_MESSAGE_OPTS_SLASH,
+      ephemeral: false
+    })
   }
 }

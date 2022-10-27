@@ -36,7 +36,7 @@ export async function runCriticalChecks (
 
     return {
       error: true,
-      message: (err as Error).toString()
+      message: (err as Error).message
     }
   }
 }
