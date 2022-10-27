@@ -8,7 +8,7 @@ function genericLog (message: string, thread: ThreadChannel): void {
     await thread.send({
       content: message,
       ...DEFAULT_MESSAGE_OPTS_DJS
-    })
+    }), 'rethrow'
   )
 }
 

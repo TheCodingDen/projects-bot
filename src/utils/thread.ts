@@ -14,6 +14,11 @@ interface ThreadExisted {
   message: Message
 }
 
+/**
+ * Send a message to a private feedback thread.
+ * This will create one if one does not already exist, or make a new one.
+ * This persists the potential new thread ID.
+ */
 export async function sendMessageToFeedbackThread (
   message: MessageCreateOptions,
   submission: ValidatedSubmission | PendingSubmission

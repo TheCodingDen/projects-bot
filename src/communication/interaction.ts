@@ -18,7 +18,7 @@ function genericInteractionLog (
         content: message,
         ...DEFAULT_MESSAGE_OPTS_DJS,
         ...opts
-      })
+      }), 'rethrow'
     )
   } else {
     void runCatching(async () =>
@@ -26,7 +26,7 @@ function genericInteractionLog (
         content: message,
         ...DEFAULT_MESSAGE_OPTS_DJS,
         ...opts
-      })
+      }), 'rethrow'
     )
   }
 }
@@ -37,7 +37,7 @@ function genericCommandLog (message: string, ctx: CommandContext, opts?: Message
       content: message,
       ...DEFAULT_MESSAGE_OPTS_SLASH,
       ...opts
-    })
+    }), 'rethrow'
   )
 }
 

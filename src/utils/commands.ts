@@ -4,6 +4,10 @@ import { internalLog } from '../communication/internal'
 import { fetchSubmissionByThreadId } from '../db/submission'
 import { PendingSubmission, ValidatedSubmission } from '../types/submission'
 
+/**
+ * Fetches the submission for the given command context.
+ * This relies on the thread ID to perform the lookup.
+ */
 export async function fetchSubmissionForContext (ctx: CommandContext): Promise<ValidatedSubmission | PendingSubmission | undefined> {
   const id = ctx.channelID
 

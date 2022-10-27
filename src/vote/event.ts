@@ -7,7 +7,7 @@ import { Vote, VoteType } from '../types/vote'
 import { createEmbed, updateMessage } from '../utils/embed'
 import { stringify } from '../utils/stringify'
 import { canVote, toVoteRole } from '../utils/vote'
-import { downvote, pause, unpause, upvote, voteRejectsProject } from './action'
+import { downvote, pause, unpause, upvote, voteRejectsSubmission } from './action'
 import { VoteModificationResult } from './result'
 
 export async function handleButtonEvent (
@@ -32,7 +32,7 @@ export async function handleButtonEvent (
     return
   }
 
-  // Check the pending case, abort if it is in the pending state
+  // Users cannot vote on pending or paused submissions
   if (!(submission.state === 'PROCESSING' || submission.state === 'PAUSED')) {
     logger.debug(`Rejecting button as state is ${submission.state}`)
     interactionLog.warning(
@@ -54,6 +54,7 @@ export async function handleButtonEvent (
 
   let type: VoteType = 'PAUSE'
 
+  // Convert to DB vote type
   if (rawType === 'upvote') {
     type = 'UPVOTE'
   } else if (rawType === 'downvote') {
@@ -89,7 +90,7 @@ export async function handleButtonEvent (
 
     logger.debug(`Removing existing vote ${stringify.vote(existingVote)}`)
 
-    // Filter out this vote
+    // Filter out the existing vote
     const filtered = submission.votes.filter((v) => v !== existingVote)
 
     submission.votes = filtered
@@ -101,9 +102,10 @@ export async function handleButtonEvent (
     return
   }
 
+  // If this vote rejects a project, ensure a draft rejection reason is set.
   const hasDraft = submission.drafts[0] !== undefined
 
-  if (type === 'DOWNVOTE' && voteRejectsProject(vote, submission) && !hasDraft) {
+  if (type === 'DOWNVOTE' && voteRejectsSubmission(vote, submission) && !hasDraft) {
     interactionLog.error('Cannot reject without a draft set', event)
     return
   }
@@ -131,10 +133,10 @@ export async function handleButtonEvent (
     return
   }
 
-  // Only log if the interaction will still exist
+  // Log in the cases where the cleanup has not occured (so that the thread exists)
   const outcome = voteRes.outcome
   if (outcome === 'vote-add') {
-    interactionLog.info(`Applied ${vote.type.toLowerCase()}`, event)
+    interactionLog.info(`Applied ${vote.type.toLowerCase()}.`, event)
   } else if (outcome === 'pause') {
     interactionLog.info('Paused the submission for voting.', event)
   } else if (outcome === 'unpause') {

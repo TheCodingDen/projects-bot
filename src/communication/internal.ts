@@ -14,7 +14,7 @@ function genericLog (message: string, submission: Submission | undefined): void 
     await config.channels().internalLogs.send({
       content: `${message} (Submission: ${submission?.name ?? '???'})`,
       ...DEFAULT_MESSAGE_OPTS_DJS
-    })
+    }), 'rethrow'
   )
 }
 

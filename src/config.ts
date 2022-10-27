@@ -4,7 +4,13 @@ import * as env from './utils/env'
 interface RejectionParams { user: string, name: string }
 
 const config = {
+  /**
+   * Config for the forceful rejection feature.
+   */
   rejection: () => ({
+    /**
+     * The enum values to use in the /reject slash command.
+     */
     enumValues: [
       { name: 'No license', value: 'no-license' },
       { name: 'Invalid license (Non OSI / not immediately visible)', value: 'invalid-license' },
@@ -15,6 +21,9 @@ const config = {
       { name: 'Plagiarism', value: 'plagiarism' },
       { name: 'Advertisement', value: 'ad' }
     ],
+    /**
+     * The lookup table to go from enum keys to log friendly outputs.
+     */
     logLookup: {
       'no-license': 'No license',
       'invalid-license': 'Invalid license',
@@ -25,6 +34,10 @@ const config = {
       plagiarism: 'Plagiarism',
       ad: 'Advertisement'
     },
+    /**
+     * The lookup table to go from enum keys to rejection reason templates.
+     * This is used in the feedback thread.
+     */
     templates: {
       'no-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and let us know so we can process your submission. See <https://choosealicense.com/> for more information`,
       'invalid-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because it contains a non-OSI license or the license is not immediately visible in the root of the project. Please use an OSI license in a file called LICENSE, LICENSE.txt or LICENSE.md and then let us know so we can process your submission. See <https://choosealicense.com/> for more information.`,
@@ -36,12 +49,21 @@ const config = {
       ad: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is an advertisement to another service / platform. This goes against our policy on advertisements <https://docs.thecodingden.net/community-policy-center/rules#ads>. Do not resubmit this project.`
     }
   }),
+  /**
+   * Config for the backend API
+   */
   api: () => ({
     port: env.number('PORT')
   }),
+  /**
+   * Config for the active guilds in the bot.
+   */
   guilds: () => ({
     current: env.guild(process.env.NODE_ENV === 'production' ? 'MAIN_GUILD_ID' : 'DEVELOPMENT_GUILD_ID')
   }),
+  /**
+   * Config for the active channels in the bot.
+   */
   channels: () => ({
     privateSubmissions: env.textChannel('PRIVATE_SUBMISSION_CHANNEL'),
     privateLogs: env.textChannel('PRIVATE_LOG_CHANNEL'),
@@ -49,13 +71,22 @@ const config = {
     internalLogs: env.textChannel('INTERNAL_LOG_CHANNEL'),
     publicShowcase: env.textChannel('PUBLIC_SHOWCASE_CHANNEL')
   }),
+  /**
+   * Config for the active roles in the bot.
+   */
   roles: () => ({
     veterans: env.role('VETERANS_ROLE_ID', env.guild(process.env.NODE_ENV === 'production' ? 'MAIN_GUILD_ID' : 'DEVELOPMENT_GUILD_ID')),
     staff: env.role('STAFF_ROLE_ID', env.guild(process.env.NODE_ENV === 'production' ? 'MAIN_GUILD_ID' : 'DEVELOPMENT_GUILD_ID'))
   }),
+  /**
+   * Config for the voting system.
+   */
   vote: () => ({
     threshold: env.number('VOTING_THRESHOLD')
   }),
+  /**
+   * Config to hold the emojis used throughout the bot.
+   */
   emojis: () => ({
     button: {
       upvote: '👍',
@@ -69,6 +100,9 @@ const config = {
       error: '🔴'
     }
   }),
+  /**
+   * Config to hold the colour codes used throughout the bot
+   */
   colours: () => ({
     embedState: {
       ERROR: 0XFF7878,

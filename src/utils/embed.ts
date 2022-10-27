@@ -13,6 +13,8 @@ import { stringify } from './stringify'
 import { createClickableURLString } from './url'
 
 const DEFAULT_AVATAR_URL = 'https://cdn.discordapp.com/embed/avatars/0.png'
+
+// Discord requires a "value" for an embed, but a zero-width+space suffices
 const ZWS = '​'
 
 const EMPTY_FIELD = {
@@ -21,6 +23,10 @@ const EMPTY_FIELD = {
   inline: true
 }
 
+/**
+ * Create an embed for a submission.
+ * This will read the state of the embed and create the embed accordingly.
+ */
 export function createEmbed (submission: Submission): APIEmbed {
   logger.debug(
     `Creating embed for submission ${stringify.submission(submission)}`
@@ -41,40 +47,19 @@ export function createEmbed (submission: Submission): APIEmbed {
     return createPublicEmbed(submission)
   }
 
-  throw new Error(`Unknown state ${submission.state}`)
+  assert(false, `Unknown state ${submission.state}`)
 }
 
-function createEmbedBase (
-  submission: ApiSubmission | PendingSubmission | ValidatedSubmission
-): EmbedBuilder {
-  return new EmbedBuilder()
-    .setTitle(submission.name)
-    .setFields(
-      {
-        name: 'Source',
-        value: submission.links.source
-      },
-      {
-        name: 'Technologies',
-        value: submission.tech,
-        inline: true
-      },
-      {
-        name: 'Other links',
-        value: submission.links.other,
-        inline: true
-      }
-    )
-    .setDescription(submission.description)
-    .setColor(config.colours().embedState[submission.state])
-    .setTimestamp(new Date())
-}
-
-function getReplitURL (source: string): string {
-  const url = new URL(source)
-
-  // No / after github because pathname includes that slash
-  return `https://repl.it/github${url.pathname}`
+/**
+ * Edits the given message and replaces the embed with the given embed.
+ */
+export async function updateMessage (
+  message: Message,
+  apiEmbed: APIEmbed
+): Promise<Message> {
+  return await message.edit({
+    embeds: [apiEmbed]
+  })
 }
 
 function createPublicEmbed (submission: CompletedSubmission): APIEmbed {
@@ -237,11 +222,35 @@ function createPendingEmbed (submission: PendingSubmission): APIEmbed {
     .toJSON()
 }
 
-export async function updateMessage (
-  message: Message,
-  apiEmbed: APIEmbed
-): Promise<Message> {
-  return await message.edit({
-    embeds: [apiEmbed]
-  })
+function createEmbedBase (
+  submission: ApiSubmission | PendingSubmission | ValidatedSubmission
+): EmbedBuilder {
+  return new EmbedBuilder()
+    .setTitle(submission.name)
+    .setFields(
+      {
+        name: 'Source',
+        value: submission.links.source
+      },
+      {
+        name: 'Technologies',
+        value: submission.tech,
+        inline: true
+      },
+      {
+        name: 'Other links',
+        value: submission.links.other,
+        inline: true
+      }
+    )
+    .setDescription(submission.description)
+    .setColor(config.colours().embedState[submission.state])
+    .setTimestamp(new Date())
+}
+
+function getReplitURL (source: string): string {
+  const url = new URL(source)
+
+  // No / after github because pathname includes that slash
+  return `https://repl.it/github${url.pathname}`
 }

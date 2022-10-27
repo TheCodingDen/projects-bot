@@ -17,13 +17,16 @@ import { createEmbed, updateMessage } from '../utils/embed'
 import { sendMessageToFeedbackThread } from '../utils/thread'
 import { VoteModificationResult } from './result'
 
+/**
+ * Apply an upvote to a submission.
+ */
 export async function upvote (
   vote: Vote,
   submission: ValidatedSubmission
 ): Promise<VoteModificationResult> {
   assert(vote.type === 'UPVOTE', `expected UPVOTE got ${vote.type}`)
 
-  if (voteAcceptsProject(vote, submission)) {
+  if (voteAcceptsSubmission(vote, submission)) {
     return await accept(vote, submission)
   }
 
@@ -39,13 +42,16 @@ export async function upvote (
   }
 }
 
+/**
+ * Apply a downvote to a submission.
+ */
 export async function downvote (
   vote: Vote,
   submission: ValidatedSubmission
 ): Promise<VoteModificationResult> {
   assert(vote.type === 'DOWNVOTE', `expected DOWNVOTE got ${vote.type}`)
 
-  if (voteRejectsProject(vote, submission)) {
+  if (voteRejectsSubmission(vote, submission)) {
     return await reject(vote, submission)
   }
 
@@ -61,6 +67,9 @@ export async function downvote (
   }
 }
 
+/**
+ * Pause a submission for voting.
+ */
 export async function pause (
   vote: Vote,
   submission: ValidatedSubmission
@@ -83,6 +92,9 @@ export async function pause (
   }
 }
 
+/**
+ * Unpause a submission for voting.
+ */
 export async function unpause (
   vote: Vote,
   submission: ValidatedSubmission
@@ -105,6 +117,9 @@ export async function unpause (
   }
 }
 
+/**
+ * Accept a submission, this will run cleanup for the submission.
+ */
 export async function accept (
   vote: Vote,
   submission: ValidatedSubmission
@@ -130,9 +145,6 @@ export async function accept (
     embeds: [embed]
   })
 
-  // Report any errors in logs
-  // TODO:
-
   privateLog.info(`<@${vote.voter.id}> accepted the submission.`, submission)
 
   return {
@@ -141,6 +153,9 @@ export async function accept (
   }
 }
 
+/**
+ * Reject a submission, this will run cleanup for the submission.
+ */
 export async function reject (
   vote: Vote,
   submission: ValidatedSubmission
@@ -203,6 +218,9 @@ interface RejectionDetails {
   rawReason: string
 }
 
+/**
+ * Forcefully reject a submission, this will run cleanup for the submission.
+ */
 export async function forceReject (
   rejecter: GuildMember,
   // Could be in the pending state, we will just ignore warnings if that is the case
@@ -259,7 +277,12 @@ export async function forceReject (
   assert(false, 'unreachable')
 }
 
-export function voteAcceptsProject (
+/**
+ * Determine whether an upvote will accept a submission, this means
+ * the total votes including this one surpases the voting threshold as
+ * defined in the config.
+ */
+export function voteAcceptsSubmission (
   vote: Vote,
   submission: ValidatedSubmission
 ): boolean {
@@ -273,7 +296,12 @@ export function voteAcceptsProject (
   return votes + 1 >= threshold
 }
 
-export function voteRejectsProject (
+/**
+ * Determine whether an upvote will reject a submission, this means
+ * the total votes including this one surpases the voting threshold as
+ * defined in the config.
+ */
+export function voteRejectsSubmission (
   vote: Vote,
   submission: ValidatedSubmission
 ): boolean {

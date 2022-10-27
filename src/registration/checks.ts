@@ -42,7 +42,9 @@ export async function runCriticalChecks (
 }
 
 /**
- * True if the checks pass, false otherwise
+ * Runs the non critical checks.
+ * The result of these checks is not critical for application function.
+ * Returns `true` if the checks passed, `false` otherwise.
  */
 export async function runNonCriticalChecks (
   _submission: ValidatedSubmission

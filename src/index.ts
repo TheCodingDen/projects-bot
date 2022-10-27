@@ -50,6 +50,7 @@ creator.on('commandError', (command, error) =>
   logger.error(`Command ${command.commandName}: ${error.message} \n ${error.stack}`)
 )
 
+// The button events we handle through djs itself
 const OUR_BUTTONS = ['pause', 'upvote', 'downvote']
 
 void (async () => {

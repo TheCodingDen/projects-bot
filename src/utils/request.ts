@@ -1,7 +1,17 @@
 import { DiscordAPIError } from 'discord.js'
 import { internalLog } from '../communication/internal'
 
-export async function runCatching<T> (fn: () => Promise<T | undefined> | T | undefined): Promise<T> {
+// FIXME: better name than "supress"
+type CatchBehaviour = 'rethrow' | 'supress'
+
+/**
+ * Run the callback, catching any errors that are thrown from it.
+ * If `behaviour` is "supress", `undefined` is returned.
+ * If `behaviour` is "rethrow", the caught error is rethrown.
+ */
+export async function runCatching<T> (fn: () => Promise<T | undefined> | T | undefined, behaviour: 'rethrow'): Promise<T>
+export async function runCatching<T> (fn: () => Promise<T | undefined> | T | undefined, behaviour: 'supress'): Promise<T | undefined>
+export async function runCatching<T> (fn: () => Promise<T | undefined> | T | undefined, behaviour: CatchBehaviour): Promise<T | undefined> {
   let msg = 'unknown'
   let cause
 
@@ -31,6 +41,10 @@ export async function runCatching<T> (fn: () => Promise<T | undefined> | T | und
   }
 
   internalLog.error(`Request failure: ${msg}`, undefined)
+
+  if (behaviour === 'supress') {
+    return undefined
+  }
 
   // Request errors are fatal, we cannot continue, ideally requests never fail anyways
   throw cause

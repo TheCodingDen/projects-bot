@@ -8,7 +8,7 @@ function genericLog (message: string, submission: PendingSubmission | ValidatedS
     await config.channels().privateLogs.send({
       content: `${message} (Submission: ${submission.name})`,
       ...DEFAULT_MESSAGE_OPTS_DJS
-    })
+    }), 'rethrow'
   )
 }
 

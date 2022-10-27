@@ -6,6 +6,9 @@ function reportInvalidConfig (key: string, value: unknown, expected: string): ne
   process.exit(1)
 }
 
+/**
+ * Read a string from the environment.
+ */
 export function string (key: string): string {
   const value = process.env[key]
 
@@ -16,6 +19,9 @@ export function string (key: string): string {
   return value
 }
 
+/**
+ * Read a number from the environment.
+ */
 export function number (key: string): number {
   const value = Number(string(key))
 
@@ -26,6 +32,9 @@ export function number (key: string): number {
   return value
 }
 
+/**
+ * Read a boolean from the environment.
+ */
 export function boolean (key: string): boolean {
   const value = string(key)
 
@@ -37,6 +46,9 @@ export function boolean (key: string): boolean {
   return value === 'true'
 }
 
+/**
+ * Read a snowflake and lookup the corresponding text channel from the environment.
+ */
 export function textChannel (key: string): TextChannel {
   const id = string(key)
   const channel = client.channels.cache.get(id)
@@ -48,6 +60,9 @@ export function textChannel (key: string): TextChannel {
   return channel
 }
 
+/**
+ * Read a snowflake and lookup the corresponding guild from the environment.
+ */
 export function guild (key: string): Guild {
   const id = string(key)
   const guild = client.guilds.cache.get(id)
@@ -59,6 +74,9 @@ export function guild (key: string): Guild {
   return guild
 }
 
+/**
+ * Read a snowflake and lookup the corresponding role from the environment.
+ */
 export function role (key: string, guild: Guild): Role {
   const id = string(key)
   const role = guild.roles.cache.get(id)

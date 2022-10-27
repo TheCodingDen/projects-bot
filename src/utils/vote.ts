@@ -2,6 +2,9 @@ import { VoteRole } from '@prisma/client'
 import { GuildMember } from 'discord.js'
 import config from '../config'
 
+/**
+ * Determine if a given member is permitted to vote on submissions.
+ */
 export function canVote (voter: GuildMember): boolean {
   const roles = voter.roles.cache
   const { veterans, staff } = config.roles()
@@ -9,6 +12,10 @@ export function canVote (voter: GuildMember): boolean {
   return roles.has(staff.id) || roles.has(veterans.id)
 }
 
+/**
+ * Determine the VoteRole for a given member, which represents
+ * if they are staff or veteran.
+ */
 export function toVoteRole (voter: GuildMember): VoteRole {
   const roles = voter.roles.cache
   const { veterans, staff } = config.roles()

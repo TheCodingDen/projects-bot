@@ -4,6 +4,10 @@ import { Draft } from '../types/draft'
 import { Submission } from '../types/submission'
 import { Vote } from '../types/vote'
 
+/**
+ * Stringification utility functions for our object.
+ * This avoids the requirement to bolt on toString implementations to our interfaces.
+ */
 export const stringify = {
   submission: (submission: Submission | undefined): string => {
     if (submission === undefined) {

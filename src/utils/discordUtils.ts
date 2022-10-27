@@ -1,4 +1,4 @@
-export const getAssignedGuilds = (opts?: { includeMain?: boolean }): string[] => {
+export function getAssignedGuilds (opts?: { includeMain?: boolean }): string[] {
   const guilds = []
 
   if (process.env.NODE_ENV === 'production') {

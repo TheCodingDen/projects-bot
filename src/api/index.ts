@@ -34,11 +34,17 @@ server.post(
   '/submissions',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    // Step 1: Validate the JSON shape
+    // Validate the JSON shape
     const body = req.body
+
+    logger.debug(`Received incoming request (user-agent: ${req.headers['user-agent']}) (body: ${JSON.stringify(body)})`)
+
+    logger.trace('Validating body')
 
     // Should be true if Fastify properly validates the incoming data
     assert(typeof body === 'object' && !!body, 'body was not an object')
+
+    logger.trace('Body was valid')
 
     // Fastify validated the shape for us
     const submission = body as ApiSubmission
@@ -46,7 +52,8 @@ server.post(
     // This is the only valid value for this type, but the client wont provide it so we set it here
     submission.state = 'RAW'
 
-    // Step 2: Send embed to private submissions channel
+    // Send embed to private submissions channel
+    logger.trace('Sending embed to private submissions channel')
     const embed = createEmbed(submission)
     const { privateSubmissions } = config.channels()
 
@@ -57,18 +64,25 @@ server.post(
           .addComponents(...VOTING_BUTTONS)
       ]
     })
+    logger.trace('Sent embed to private submissions channel')
 
-    // Step 3: Create attached review thread
+    // Create attached review thread
+    logger.trace('Creating private review thread')
     const reviewThread = await createPrivateReviewThread(
       submission,
       submissionMessage
     )
+    logger.trace('Created private review thread')
 
+    logger.trace('Saving API data')
     // Save API data to get submission ID and creation date
     const { id: submissionId, submittedAt } = await saveApiData(submission)
+    logger.trace(`Saved API data (id: ${submissionId}) (submittedAt: ${submittedAt.toLocaleString()})`)
 
-    // Step 4: Run critical checks
+    // Run critical checks
+    logger.trace('Running critical checks')
     const criticalResult = await runCriticalChecks(submission, reviewThread)
+    logger.trace(`Critical checks pass: ${criticalResult.error}`)
 
     if (criticalResult.error) {
       logger.error(
@@ -116,15 +130,20 @@ server.post(
       drafts: []
     }
 
+    logger.debug(`Working with submission ${stringify.submission(validatedSubmission)}`)
+
     // Set the remaning data needed to make up the validated submission
     await updateAuthorId(validatedSubmission, author.id)
     await updateReviewThreadId(validatedSubmission, reviewThread.id)
     await updateSubmissionMessageId(validatedSubmission, submissionMessage.id)
 
-    // Step 6: Run non critical checks
+    logger.trace('Running non critical checks')
+    // Run non critical checks
     const didChecksPass = await runNonCriticalChecks(validatedSubmission)
+    logger.trace(`Non critical checks pass: ${didChecksPass}`)
 
     if (!didChecksPass) {
+      logger.info(`Non critical checks failed for submission ${stringify.submission(validatedSubmission)}`)
       // Move to warning state
       await updateSubmissionState(validatedSubmission, 'WARNING')
 
