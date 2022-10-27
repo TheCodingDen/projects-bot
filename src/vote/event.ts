@@ -7,7 +7,7 @@ import { Vote, VoteType } from '../types/vote'
 import { createEmbed, updateMessage } from '../utils/embed'
 import { stringify } from '../utils/stringify'
 import { canVote, toVoteRole } from '../utils/vote'
-import { downvote, pause, unpause, upvote } from './action'
+import { downvote, pause, unpause, upvote, voteRejectsProject } from './action'
 import { VoteModificationResult } from './result'
 
 export async function handleButtonEvent (
@@ -79,7 +79,8 @@ export async function handleButtonEvent (
       v.voter.id === vote.voter.id
   )
 
-  if (existingVote) {
+  // You have a vote but you arent trying to pause or unpause
+  if (existingVote && (type !== "PAUSE" && type !== "UNPAUSE")) {
     if (existingVote.type !== type) {
       // Attempted to add an unrelated vote whilst already having one
       interactionLog.warning('You cannot add an upvote and a downvote.', event)
@@ -97,6 +98,13 @@ export async function handleButtonEvent (
     await updateMessage(submission.submissionMessage, createEmbed(submission))
 
     interactionLog.info(`Removed ${existingVote.type.toLowerCase()}.`, event)
+    return
+  }
+
+  const hasDraft = submission.drafts[0] !== undefined
+
+  if (type === "DOWNVOTE" && voteRejectsProject(vote, submission) && !hasDraft) {
+    interactionLog.error("Cannot reject without a draft set", event) 
     return
   }
 
@@ -119,6 +127,7 @@ export async function handleButtonEvent (
 
   if (voteRes.error) {
     interactionLog.error('Failed to cast vote, internal error occured', event)
+    logger.error(voteRes.message)
     return
   }
 

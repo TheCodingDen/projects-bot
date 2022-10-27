@@ -111,14 +111,11 @@ export async function accept (
 ): Promise<VoteModificationResult> {
   assert(vote.type === 'UPVOTE', `expected UPVOTE got ${vote.type}`)
 
-  // Step 1: Add vote to DB
   await addVote(vote, submission)
   submission.votes.push(vote)
 
-  // Step 2: Archive the review thread
   await submission.reviewThread.setArchived(true)
 
-  // Step 3: Delete submission message
   await submission.submissionMessage.delete()
 
   const completedSubmission: CompletedSubmission = {
@@ -126,7 +123,6 @@ export async function accept (
     state: 'ACCEPTED'
   }
 
-  // Step 4: Post to public showcase
   const { publicShowcase } = config.channels()
   const embed = createEmbed(completedSubmission)
 
@@ -134,7 +130,7 @@ export async function accept (
     embeds: [embed]
   })
 
-  // Step 5: Report any errors in logs
+  // Report any errors in logs
   // TODO:
 
   privateLog.info(`<@${vote.voter.id}> accepted the submission.`, submission)
@@ -150,15 +146,25 @@ export async function reject (
   submission: ValidatedSubmission
 ): Promise<VoteModificationResult> {
   assert(vote.type === 'DOWNVOTE', `expected DOWNVOTE got ${vote.type}`)
-  // Step 1: Get latest draft
-  // TODO:
-  const rejectionMessage = `Reject? <@${vote.voter.id}>`
+  const draft = submission.drafts[0]
+  assert(!!draft, "cannot reject without a draft")
 
-  // Step 2: Save vote to DB
+  const reviewers = await submission.reviewThread.members.fetch()
+  const formattedReviewers = reviewers.filter(v => !v.user?.bot).map(v => `<@${v.id}>`)
+
+  const rejectionMessage = `
+Reviewers: ${formattedReviewers}
+
+Send the message below in this thread:
+\`\`\`
+${draft.content}
+\`\`\`
+`
+
   await addVote(vote, submission)
   submission.votes.push(vote)
 
-  // Step 3: Create private feedback thread
+  // TODO: extract this into a helper function
   const { publicShowcase } = config.channels()
   const feedbackThread = await publicShowcase.threads.create({
     name: submission.name,
@@ -169,28 +175,21 @@ export async function reject (
         : ChannelType.PublicThread
   })
 
-  // Step 4: Send message template
   const sentMessage = await feedbackThread.send({
     content: rejectionMessage
   })
 
-  // Step 5: Wait for user to send template
   const filter = (m: Message): boolean =>
-    m.author.id === vote.voter.id && m.channelId === feedbackThread.id
+    reviewers.has(m.author.id) && m.channelId === feedbackThread.id
 
-  // We don't care about the message itself, just that the feedback has been posted
   await feedbackThread.awaitMessages({ filter, max: 1 })
 
-  // Delete our message now
   await sentMessage.delete()
 
-  // Step 6: Archive review thread
   await submission.reviewThread.setArchived(true)
 
-  // Step 7: Delete submission message
   await submission.submissionMessage.delete()
 
-  // Step 8: Log rejection in private logs
   privateLog.info(`<@${vote.voter.id}> rejected the submission.`, submission)
 
   return {
@@ -260,7 +259,7 @@ export async function forceReject (
   assert(false, 'unreachable')
 }
 
-function voteAcceptsProject (
+export function voteAcceptsProject (
   vote: Vote,
   submission: ValidatedSubmission
 ): boolean {
@@ -274,7 +273,7 @@ function voteAcceptsProject (
   return votes + 1 >= threshold
 }
 
-function voteRejectsProject (
+export function voteRejectsProject (
   vote: Vote,
   submission: ValidatedSubmission
 ): boolean {

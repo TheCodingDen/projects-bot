@@ -1,4 +1,5 @@
 import { GuildMember, Message, Snowflake, ThreadChannel } from 'discord.js'
+import { Draft } from './draft'
 import { SubmissionId } from './misc'
 import { Vote } from './vote'
 
@@ -63,6 +64,7 @@ export interface ValidatedSubmission extends BaseSubmission {
   author: GuildMember
 
   votes: Vote[]
+  drafts: Draft[]
 }
 
 /**

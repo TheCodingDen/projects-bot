@@ -50,7 +50,8 @@ model Submission {
   sourceLinks String
   otherLinks  String
 
-  votes Vote[]
+  votes  Vote[]
+  drafts Draft[]
 }
 
 model Vote {
@@ -64,4 +65,13 @@ model Vote {
   // It is not disallowed to have an upvote and a downvote at the same time
   // Similarly, having votes alongside a pause is acceptable
   @@id([voterId, submissionId, type])
+}
+
+model Draft {
+  id           String     @id @default(cuid())
+  timestamp    DateTime   @default(now())
+  content      String
+  authorId     String
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 }

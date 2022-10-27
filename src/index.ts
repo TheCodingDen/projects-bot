@@ -47,8 +47,10 @@ creator.on('commandRegister', (command) =>
   logger.info(`Registered command ${command.commandName}`)
 )
 creator.on('commandError', (command, error) =>
-  logger.error(`Command ${command.commandName}:`, error)
+  logger.error(`Command ${command.commandName}: ${error}`)
 )
+
+const OUR_BUTTONS = ['pause', 'upvote', 'downvote']
 
 void (async () => {
   creator
@@ -58,7 +60,7 @@ void (async () => {
           // HACK: Don't let it handle button events that we handle
           if (
             data.type === 3 &&
-            ['pause', 'upvote', 'downvote'].some(
+            OUR_BUTTONS.some(
               (a) => data.data.custom_id === a
             )
           ) {
@@ -74,7 +76,7 @@ void (async () => {
 
   // Event setup
   client.on('interactionCreate', (ev) => {
-    if (ev.isButton() && ev.inCachedGuild()) {
+    if (ev.isButton() && ev.inCachedGuild() && OUR_BUTTONS.some(a => a === ev.component.customId)) {
       handleButtonEvent(ev)
     }
   })

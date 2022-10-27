@@ -63,14 +63,14 @@ export default class RejectCommand extends SlashCommand {
       return
     }
 
+    const template = templates[rawReason]
+    const logOutput = logLookup[rawReason]
+
     logger.debug(
       `Starting instant rejection for submission ${stringify.submission(
         submission
-      )} (reason: ${rawReason})`
+      )} (reason: ${logOutput})`
     )
-
-    const template = templates[rawReason]
-    const logOutput = logLookup[rawReason]
 
     // This means Discord gave us a reason that wasnt in the object,
     // could be caused by misconfiguration or API failure.
@@ -82,7 +82,7 @@ export default class RejectCommand extends SlashCommand {
       name: submission.name
     })
 
-    commandLog.info(`Rejecting submission for reason ${rawReason}`, ctx, { ephemeral: false })
+    commandLog.info(`Rejecting submission for reason ${logOutput}`, ctx, { ephemeral: false })
 
     const rejectionResult = await forceReject(member, submission, {
       templatedReason,

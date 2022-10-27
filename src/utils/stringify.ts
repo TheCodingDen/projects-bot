@@ -1,5 +1,6 @@
 import { GuildBasedChannel, User as DjsUser } from 'discord.js'
 import { User as SlashCreateUser } from 'slash-create'
+import { Draft } from '../types/draft'
 import { Submission } from '../types/submission'
 import { Vote } from '../types/vote'
 
@@ -56,6 +57,13 @@ export const stringify = {
     }
 
     return `Channel { (id: ${channel.id}) (name: ${channel.name}) (type: ${channel.type}) (guildId: ${channel.guildId})}`
-  }
+  },
 
+  draft: (draft: Draft | undefined): string => {
+    if (draft === undefined) {
+      return `Draft { undefined }`
+    }
+
+    return `Draft { (id: ${draft.id}) (author: ${draft.author.id}) (timestamp: ${draft.timestamp.toLocaleString()})}`
+  }
 }

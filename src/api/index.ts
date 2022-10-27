@@ -112,7 +112,8 @@ server.post(
       feedbackThread: undefined,
       author,
 
-      votes: []
+      votes: [],
+      drafts: []
     }
 
     // Set the remaning data needed to make up the validated submission
