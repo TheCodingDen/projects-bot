@@ -9,6 +9,8 @@ import {
 import { addVote } from '../db/vote'
 import {
   CompletedSubmission,
+  isPending,
+  isValidated,
   PendingSubmission,
   ValidatedSubmission
 } from '../types/submission'
@@ -84,7 +86,11 @@ export async function pause (
   await updateSubmissionState(submission, 'PAUSED')
   await updateMessage(submission.submissionMessage, createEmbed(submission))
 
-  privateLog.info(`<@${vote.voter.id}> paused the submission.`, submission)
+  privateLog.info({
+    type: 'text',
+    content: `<@${vote.voter.id}> paused the submission.`,
+    ctx: submission
+  })
 
   return {
     error: false,
@@ -109,7 +115,11 @@ export async function unpause (
   await updateSubmissionState(submission, 'PROCESSING')
   await updateMessage(submission.submissionMessage, createEmbed(submission))
 
-  privateLog.info(`<@${vote.voter.id}> unpaused the submission.`, submission)
+  privateLog.info({
+    type: 'text',
+    content: `<@${vote.voter.id}> unpaused the submission.`,
+    ctx: submission
+  })
 
   return {
     error: false,
@@ -145,7 +155,11 @@ export async function accept (
     embeds: [embed]
   })
 
-  privateLog.info(`<@${vote.voter.id}> accepted the submission.`, submission)
+  privateLog.info({
+    type: 'text',
+    content: `<@${vote.voter.id}> accepted the submission.`,
+    ctx: submission
+  })
 
   return {
     error: false,
@@ -205,7 +219,11 @@ ${draft.content}
 
   await submission.submissionMessage.delete()
 
-  privateLog.info(`<@${vote.voter.id}> rejected the submission.`, submission)
+  privateLog.info({
+    type: 'text',
+    content: `<@${vote.voter.id}> rejected the submission.`,
+    ctx: submission
+  })
 
   return {
     error: false,
@@ -222,7 +240,7 @@ interface RejectionDetails {
  * Forcefully reject a submission, this will run cleanup for the submission.
  */
 export async function forceReject (
-  rejecter: GuildMember,
+  voter: GuildMember,
   // Could be in the pending state, we will just ignore warnings if that is the case
   submission: ValidatedSubmission | PendingSubmission,
   details: RejectionDetails
@@ -244,12 +262,13 @@ export async function forceReject (
     submission
   )
 
-  privateLog.info(
-    `<@${rejecter.id}> force-rejected the submission. (reason: ${details.rawReason})`,
-    submission
-  )
+  privateLog.info({
+    type: 'text',
+    content: `<@${voter.id}> force-rejected the submission. (reason: ${details.rawReason})`,
+    ctx: submission
+  })
 
-  if (submission.state === 'PROCESSING') {
+  if (isValidated(submission)) {
     await submission.reviewThread.setArchived(true)
     await submission.submissionMessage.delete()
 
@@ -259,7 +278,7 @@ export async function forceReject (
     }
   }
 
-  if (submission.state === 'WARNING') {
+  if (isPending(submission)) {
     // Validate to get the objects we need to run cleanup
     const { reviewThread, submissionMessage } = await validatePendingSubmission(
       submission

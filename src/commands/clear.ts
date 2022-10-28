@@ -35,7 +35,11 @@ export default class ClearCommand extends SlashCommand {
     // Not in a pending state (validated instead)
     if (submission.state !== 'WARNING' && submission.state !== 'ERROR') {
       logger.debug('Clear halting, submission in validated state')
-      return void commandLog.warning('Submission has no warnings.', ctx)
+      return void commandLog.warning({
+        type: 'text',
+        content: 'Submission has no warnings.',
+        ctx
+      })
     }
 
     try {
@@ -46,13 +50,26 @@ export default class ClearCommand extends SlashCommand {
       await updateMessage(validated.submissionMessage, createEmbed(validated))
 
       logger.debug('Clear complete.')
-      commandLog.info('Cleared warnings successfully.', ctx, {
-        ephemeral: false
+      commandLog.info({
+        type: 'text',
+        content: 'Cleared warnings successfully.',
+        extraOpts: {
+          ephemeral: true
+        },
+        ctx
       })
 
-      privateLog.info(`${ctx.user.mention} cleared warnings.`, validated)
+      privateLog.info({
+        type: 'text',
+        content: `${ctx.user.mention} cleared warnings.`,
+        ctx: validated
+      })
     } catch (err) {
-      commandLog.error('Failed to clear warnings, submission likely broken.', ctx)
+      commandLog.error({
+        type: 'text',
+        content: 'Failed to clear warnings, submission likely broken.',
+        ctx
+      })
     }
   }
 }

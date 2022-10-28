@@ -1,5 +1,13 @@
 import assert from 'assert'
-import { SlashCommand, SlashCreator, CommandContext, CommandOptionType, ComponentType, TextInputStyle, ButtonStyle } from 'slash-create'
+import {
+  SlashCommand,
+  SlashCreator,
+  CommandContext,
+  CommandOptionType,
+  ComponentType,
+  TextInputStyle,
+  ButtonStyle
+} from 'slash-create'
 import { commandLog } from '../communication/interaction'
 import { createDraft, deleteDraft } from '../db/draft'
 import { Draft } from '../types/draft'
@@ -7,6 +15,7 @@ import { ValidatedSubmission } from '../types/submission'
 import { fetchSubmissionForContext } from '../utils/commands'
 import { DEFAULT_MESSAGE_OPTS_SLASH } from '../utils/communication'
 import { getAssignedGuilds } from '../utils/discordUtils'
+import { runCatching } from '../utils/request'
 import { stringify } from '../utils/stringify'
 
 export default class DraftCommand extends SlashCommand {
@@ -53,7 +62,11 @@ export default class DraftCommand extends SlashCommand {
     assert(!!subcommand, 'subcommand was not set')
 
     if (submission.state !== 'PROCESSING') {
-      commandLog.warning('Cannot use drafts on a pending or paused submission, please resolve issues and retry.', ctx)
+      commandLog.warning({
+        type: 'text',
+        content: 'Cannot use drafts on a pending or paused submission, please resolve issues and retry.',
+        ctx
+      })
       return
     }
 
@@ -72,12 +85,19 @@ export default class DraftCommand extends SlashCommand {
     }
   }
 
-  async viewDraftHistory (ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
+  async viewDraftHistory (
+    ctx: CommandContext,
+    submission: ValidatedSubmission
+  ): Promise<void> {
     const drafts = submission.drafts.reverse()
     let currentIdx = 0
 
     if (!drafts.length) {
-      commandLog.info('No draft set.', ctx)
+      commandLog.error({
+        type: 'text',
+        content: 'No draft set.',
+        ctx
+      })
       return
     }
 
@@ -100,7 +120,7 @@ timestamp: ${draft.timestamp.toLocaleString()}
             {
               type: ComponentType.BUTTON,
               custom_id: 'previous',
-              label: '<= Previous',
+              label: 'Previous',
               style: ButtonStyle.PRIMARY
             },
             {
@@ -112,7 +132,7 @@ timestamp: ${draft.timestamp.toLocaleString()}
             {
               type: ComponentType.BUTTON,
               custom_id: 'next',
-              label: 'Next =>',
+              label: 'Next',
               style: ButtonStyle.PRIMARY
             }
           ]
@@ -122,7 +142,7 @@ timestamp: ${draft.timestamp.toLocaleString()}
 
     const message = await ctx.fetch()
 
-    ctx.registerComponentFrom(message.id, 'previous', bctx => {
+    ctx.registerComponentFrom(message.id, 'previous', (bctx) => {
       if (currentIdx === 0) {
         // Skip to last
         currentIdx = drafts.length - 1
@@ -130,15 +150,17 @@ timestamp: ${draft.timestamp.toLocaleString()}
         currentIdx -= 1
       }
 
-      void bctx.acknowledge()
+      void runCatching(async () => {
+        await bctx.acknowledge()
 
-      void message.edit({
-        content: generateDraftString(drafts[currentIdx]),
-        ...DEFAULT_MESSAGE_OPTS_SLASH
-      })
+        await message.edit({
+          content: generateDraftString(drafts[currentIdx]),
+          ...DEFAULT_MESSAGE_OPTS_SLASH
+        })
+      }, 'rethrow')
     })
 
-    ctx.registerComponentFrom(message.id, 'next', bctx => {
+    ctx.registerComponentFrom(message.id, 'next', (bctx) => {
       if (currentIdx === drafts.length - 1) {
         // Skip to front
         currentIdx = 0
@@ -146,41 +168,59 @@ timestamp: ${draft.timestamp.toLocaleString()}
         currentIdx += 1
       }
 
-      void bctx.acknowledge()
+      void runCatching(async () => {
+        await bctx.acknowledge()
 
-      void message.edit({
-        content: generateDraftString(drafts[currentIdx]),
-        ...DEFAULT_MESSAGE_OPTS_SLASH
-      })
+        await message.edit({
+          content: generateDraftString(drafts[currentIdx]),
+          ...DEFAULT_MESSAGE_OPTS_SLASH
+        })
+      }, 'rethrow')
     })
 
     ctx.registerComponentFrom(message.id, 'clear', () => {
-      void message.delete()
+      void runCatching(async () => await message.delete(), 'rethrow')
     })
   }
 
-  async clearCurrentDraft (ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
+  async clearCurrentDraft (
+    ctx: CommandContext,
+    submission: ValidatedSubmission
+  ): Promise<void> {
     // TODO: confirmation?
 
     const hasDraft = submission.drafts.length > 0
 
     if (!hasDraft) {
-      commandLog.error('No draft set.', ctx)
+      commandLog.error({
+        type: 'text',
+        content: 'No draft set.',
+        ctx
+      })
       return
     }
 
     const id = submission.drafts[0].id
     await deleteDraft(id)
 
-    commandLog.info(`Deleted draft ${id}.`, ctx)
+    commandLog.info({
+      type: 'text',
+      content: `Deleted draft ${id}.`,
+      ctx
+    })
   }
 
-  async addNewDraft (ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
-    const oldValue = submission.drafts[0]?.content ?? `<@${submission.authorId}>, unfortunately, your project has been rejected.`
+  async addNewDraft (
+    ctx: CommandContext,
+    submission: ValidatedSubmission
+  ): Promise<void> {
+    const oldValue =
+      submission.drafts[0]?.content ??
+      `<@${submission.authorId}>, unfortunately, your project has been rejected.`
 
     await ctx.sendModal(
       {
-        title: `Draft rejection message for ${submission.name}`,
+        title: 'Draft rejection message',
         components: [
           {
             type: ComponentType.ACTION_ROW,
@@ -213,21 +253,31 @@ timestamp: ${draft.timestamp.toLocaleString()}
     )
   }
 
-  async viewCurrentDraft (ctx: CommandContext, submission: ValidatedSubmission): Promise<void> {
+  async viewCurrentDraft (
+    ctx: CommandContext,
+    submission: ValidatedSubmission
+  ): Promise<void> {
     const current = submission.drafts[0]
 
     if (!current) {
-      commandLog.info('No draft set', ctx)
+      commandLog.error({
+        type: 'text',
+        content: 'No draft set.',
+        ctx
+      })
       return
     }
 
-    commandLog.info(
-`
+    commandLog.info({
+      type: 'text',
+      content: `
 ${current.content}
 
 id: ${current.id}
 author: ${current.author.user.tag}
 timestamp: ${current.timestamp.toLocaleString()}
-`, ctx)
+`,
+      ctx
+    })
   }
 }

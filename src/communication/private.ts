@@ -1,29 +1,47 @@
+import { BaseMessageOptions } from 'discord.js'
 import config from '../config'
 import { PendingSubmission, ValidatedSubmission } from '../types/submission'
 import { DEFAULT_MESSAGE_OPTS_DJS } from '../utils/communication'
 import { runCatching } from '../utils/request'
+import { InternalLogOptions, LogOptions, makeDjsMessageOpts } from './opts'
 
-function genericLog (message: string, submission: PendingSubmission | ValidatedSubmission): void {
-  void runCatching(async () =>
-    await config.channels().privateLogs.send({
-      content: `${message} (Submission: ${submission.name})`,
-      ...DEFAULT_MESSAGE_OPTS_DJS
-    }), 'rethrow'
+function genericLog (
+  options: InternalLogOptions<
+  BaseMessageOptions,
+  PendingSubmission | ValidatedSubmission
+  >
+): void {
+  if (options.type === 'text') {
+    options.content += `(Submission: ${options.ctx.name})`
+  }
+
+  void runCatching(
+    async () =>
+      await config.channels().internalLogs.send({
+        ...makeDjsMessageOpts(options),
+        ...DEFAULT_MESSAGE_OPTS_DJS
+      }),
+    'rethrow'
   )
 }
 
-const emojis = config.emojis().log
 export const privateLog = {
   info: (
-    message: string,
-    submission: PendingSubmission | ValidatedSubmission
-  ) => genericLog(`${emojis.info} ${message}`, submission),
+    options: LogOptions<
+    BaseMessageOptions,
+    PendingSubmission | ValidatedSubmission
+    >
+  ) => genericLog({ ...options, level: 'info' }),
   warning: (
-    message: string,
-    submission: PendingSubmission | ValidatedSubmission
-  ) => genericLog(`${emojis.warning} ${message}`, submission),
+    options: LogOptions<
+    BaseMessageOptions,
+    PendingSubmission | ValidatedSubmission
+    >
+  ) => genericLog({ ...options, level: 'warning' }),
   error: (
-    message: string,
-    submission: PendingSubmission | ValidatedSubmission
-  ) => genericLog(`${emojis.error} ${message}`, submission)
+    options: LogOptions<
+    BaseMessageOptions,
+    PendingSubmission | ValidatedSubmission
+    >
+  ) => genericLog({ ...options, level: 'error' })
 }

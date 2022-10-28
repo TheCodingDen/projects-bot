@@ -111,6 +111,11 @@ const config = {
       PROCESSING: 0X90C8AC,
       RAW: 0X90C8AC
     },
+    log: {
+      info: 0xDEADBEEF,
+      warning: 0xDEADBEEF,
+      error: 0xDEADBEEF
+    },
     publicEmbed: 0x4A90E2
   })
 }

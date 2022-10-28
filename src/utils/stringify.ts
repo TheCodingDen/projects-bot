@@ -1,7 +1,12 @@
 import { GuildBasedChannel, User as DjsUser } from 'discord.js'
 import { User as SlashCreateUser } from 'slash-create'
 import { Draft } from '../types/draft'
-import { Submission } from '../types/submission'
+import {
+  AnySubmission,
+  isPending,
+  isRaw,
+  isValidated
+} from '../types/submission'
 import { Vote } from '../types/vote'
 
 /**
@@ -9,23 +14,20 @@ import { Vote } from '../types/vote'
  * This avoids the requirement to bolt on toString implementations to our interfaces.
  */
 export const stringify = {
-  submission: (submission: Submission | undefined): string => {
+  submission: (submission: AnySubmission | undefined): string => {
     if (submission === undefined) {
       return 'Submission { undefined }'
     }
 
     const base = `${submission.name} (author: ${submission.authorId})}`
 
-    if (submission.state === 'RAW') {
+    if (isRaw(submission)) {
       // RawSubmission
       return `Submission(RAW) { ${base} }`
-    } else if (
-      submission.state === 'PROCESSING' ||
-      submission.state === 'PAUSED'
-    ) {
+    } else if (isValidated(submission)) {
       // ValidatedSubmission
       return `Submission(${submission.state}) { ${base} (id: ${submission.id}) (submissionMessageId: ${submission.submissionMessage.id}) (reviewThreadId: ${submission.reviewThread.id}) }`
-    } else if (submission.state === 'ERROR' || submission.state === 'WARNING') {
+    } else if (isPending(submission)) {
       // PendingSubmission
       return `Submission(${submission.state}) { ${base} }`
     } else if (
@@ -68,6 +70,8 @@ export const stringify = {
       return 'Draft { undefined }'
     }
 
-    return `Draft { (id: ${draft.id}) (author: ${draft.author.id}) (timestamp: ${draft.timestamp.toLocaleString()})}`
+    return `Draft { (id: ${draft.id}) (author: ${
+      draft.author.id
+    }) (timestamp: ${draft.timestamp.toLocaleString()})}`
   }
 }

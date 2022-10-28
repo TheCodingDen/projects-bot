@@ -48,18 +48,22 @@ export default class RejectCommand extends SlashCommand {
     }
 
     if (submission.state === 'ERROR') {
-      commandLog.warning(
-        'Cannot reject a project in an error state, please resolve the errors and retry.',
+      commandLog.warning({
+        type: 'text',
+        content:
+          'Cannot reject a project in an error state, please resolve the errors and retry.',
         ctx
-      )
+      })
       return
     }
 
     if (submission.state === 'PAUSED') {
-      commandLog.warning(
-        'Cannot reject a paused project, please unpause the project and retry.',
+      commandLog.warning({
+        type: 'text',
+        content:
+          'Cannot reject a paused project, please unpause the project and retry.',
         ctx
-      )
+      })
       return
     }
 
@@ -82,7 +86,14 @@ export default class RejectCommand extends SlashCommand {
       name: submission.name
     })
 
-    commandLog.info(`Rejecting submission for reason ${logOutput}`, ctx, { ephemeral: false })
+    commandLog.info({
+      type: 'text',
+      content: `Rejecting submission for reason ${logOutput}`,
+      ctx,
+      extraOpts: {
+        ephemeral: false
+      }
+    })
 
     const rejectionResult = await forceReject(member, submission, {
       templatedReason,
@@ -91,14 +102,20 @@ export default class RejectCommand extends SlashCommand {
 
     if (rejectionResult.error) {
       // Could not reject, send template to review thread
-      commandLog.info(
-        `Failed to send feedback, please send the following message in a feedback thread: \n \`\`\`\n${templatedReason}\`\`\``,
+      commandLog.info({
+        type: 'text',
+        content: `Failed to send feedback, please send the following message in a feedback thread: \n \`\`\`\n${templatedReason}\`\`\``,
         ctx,
-        { ephemeral: false }
-      )
+        extraOpts: {
+          ephemeral: false
+        }
+      })
       return
     }
 
-    assert(rejectionResult.outcome === 'instant-reject', 'result did not have outcome instant-reject')
+    assert(
+      rejectionResult.outcome === 'instant-reject',
+      'result did not have outcome instant-reject'
+    )
   }
 }

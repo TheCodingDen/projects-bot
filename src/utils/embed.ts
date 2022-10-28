@@ -6,7 +6,7 @@ import {
   ApiSubmission,
   CompletedSubmission,
   PendingSubmission,
-  Submission,
+  AnySubmission,
   ValidatedSubmission
 } from '../types/submission'
 import { stringify } from './stringify'
@@ -27,7 +27,7 @@ const EMPTY_FIELD = {
  * Create an embed for a submission.
  * This will read the state of the embed and create the embed accordingly.
  */
-export function createEmbed (submission: Submission): APIEmbed {
+export function createEmbed (submission: AnySubmission): APIEmbed {
   logger.debug(
     `Creating embed for submission ${stringify.submission(submission)}`
   )

@@ -1,61 +1,72 @@
 import assert from 'assert'
 import { Interaction, InteractionReplyOptions } from 'discord.js'
 import { CommandContext, MessageOptions } from 'slash-create'
-import config from '../config'
-import { DEFAULT_MESSAGE_OPTS_DJS, DEFAULT_MESSAGE_OPTS_SLASH } from '../utils/communication'
+import {
+  DEFAULT_MESSAGE_OPTS_DJS,
+  DEFAULT_MESSAGE_OPTS_SLASH
+} from '../utils/communication'
 import { runCatching } from '../utils/request'
+import {
+  InternalLogOptions,
+  LogOptions,
+  makeDjsMessageOpts,
+  makeSlashMessageOpts
+} from './opts'
 
 function genericInteractionLog (
-  message: string,
-  interaction: Interaction,
-  opts?: InteractionReplyOptions
+  options: InternalLogOptions<InteractionReplyOptions, Interaction>
 ): void {
+  const interaction = options.ctx
   assert(interaction.isRepliable(), 'Interaction was not repliable.')
 
   if (interaction.replied) {
-    void runCatching(async () =>
-      await interaction.followUp({
-        content: message,
-        ...DEFAULT_MESSAGE_OPTS_DJS,
-        ...opts
-      }), 'rethrow'
+    void runCatching(
+      async () =>
+        await interaction.followUp({
+          ...makeDjsMessageOpts(options),
+          ...DEFAULT_MESSAGE_OPTS_DJS
+        }),
+      'rethrow'
     )
   } else {
-    void runCatching(async () =>
-      await interaction.reply({
-        content: message,
-        ...DEFAULT_MESSAGE_OPTS_DJS,
-        ...opts
-      }), 'rethrow'
+    void runCatching(
+      async () =>
+        await interaction.reply({
+          ...makeDjsMessageOpts(options),
+          ...DEFAULT_MESSAGE_OPTS_DJS
+        }),
+      'rethrow'
     )
   }
 }
 
-function genericCommandLog (message: string, ctx: CommandContext, opts?: MessageOptions): void {
-  void runCatching(async () =>
-    await ctx.send({
-      content: message,
-      ...DEFAULT_MESSAGE_OPTS_SLASH,
-      ...opts
-    }), 'rethrow'
+function genericCommandLog (
+  options: InternalLogOptions<MessageOptions, CommandContext>
+): void {
+  void runCatching(
+    async () =>
+      await options.ctx.send({
+        ...makeSlashMessageOpts(options),
+        ...DEFAULT_MESSAGE_OPTS_SLASH
+      }),
+    'rethrow'
   )
 }
 
-const emojis = config.emojis().log
 export const interactionLog = {
-  info: (message: string, interaction: Interaction, opts?: InteractionReplyOptions) =>
-    genericInteractionLog(`${emojis.info} ${message}`, interaction, opts),
-  warning: (message: string, interaction: Interaction, opts?: InteractionReplyOptions) =>
-    genericInteractionLog(`${emojis.warning} ${message}`, interaction, opts),
-  error: (message: string, interaction: Interaction, opts?: InteractionReplyOptions) =>
-    genericInteractionLog(`${emojis.error} ${message}`, interaction, opts)
+  info: (options: LogOptions<InteractionReplyOptions, Interaction>) =>
+    genericInteractionLog({ ...options, level: 'info' }),
+  warning: (options: LogOptions<InteractionReplyOptions, Interaction>) =>
+    genericInteractionLog({ ...options, level: 'warning' }),
+  error: (options: LogOptions<InteractionReplyOptions, Interaction>) =>
+    genericInteractionLog({ ...options, level: 'error' })
 }
 
 export const commandLog = {
-  info: (message: string, ctx: CommandContext, opts?: MessageOptions) =>
-    genericCommandLog(`${emojis.info} ${message}`, ctx, opts),
-  warning: (message: string, ctx: CommandContext, opts?: MessageOptions) =>
-    genericCommandLog(`${emojis.warning} ${message}`, ctx, opts),
-  error: (message: string, ctx: CommandContext, opts?: MessageOptions) =>
-    genericCommandLog(`${emojis.error} ${message}`, ctx, opts)
+  info: (options: LogOptions<MessageOptions, CommandContext>) =>
+    genericCommandLog({ ...options, level: 'info' }),
+  warning: (options: LogOptions<MessageOptions, CommandContext>) =>
+    genericCommandLog({ ...options, level: 'warning' }),
+  error: (options: LogOptions<MessageOptions, CommandContext>) =>
+    genericCommandLog({ ...options, level: 'error' })
 }

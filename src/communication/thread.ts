@@ -1,23 +1,44 @@
-import { ThreadChannel } from 'discord.js'
-import config from '../config'
+import { BaseMessageOptions, TextBasedChannel, ThreadChannel } from 'discord.js'
 import { DEFAULT_MESSAGE_OPTS_DJS } from '../utils/communication'
 import { runCatching } from '../utils/request'
+import { InternalLogOptions, LogOptions, makeDjsMessageOpts } from './opts'
 
-function genericLog (message: string, thread: ThreadChannel): void {
-  void runCatching(async () =>
-    await thread.send({
-      content: message,
-      ...DEFAULT_MESSAGE_OPTS_DJS
-    }), 'rethrow'
+// Unioned because d.js does not consider threads 'text based' for whatever reason...
+type SendableChannel = TextBasedChannel | ThreadChannel
+
+function doLog (
+  options: InternalLogOptions<
+  BaseMessageOptions,
+  SendableChannel
+  >
+): void {
+  void runCatching(
+    async () =>
+      await options.ctx.send({
+        ...makeDjsMessageOpts(options),
+        ...DEFAULT_MESSAGE_OPTS_DJS
+      }),
+    'rethrow'
   )
 }
 
-const emojis = config.emojis().log
-export const threadLog = {
-  info: (message: string, thread: ThreadChannel) =>
-    genericLog(`${emojis.info} ${message}`, thread),
-  warning: (message: string, thread: ThreadChannel) =>
-    genericLog(`${emojis.warning} ${message}`, thread),
-  error: (message: string, thread: ThreadChannel) =>
-    genericLog(`${emojis.error} ${message}`, thread)
+export const genericLog = {
+  info: (
+    options: LogOptions<
+    BaseMessageOptions,
+    SendableChannel
+    >
+  ) => doLog({ ...options, level: 'info' }),
+  warning: (
+    options: LogOptions<
+    BaseMessageOptions,
+    SendableChannel
+    >
+  ) => doLog({ ...options, level: 'warning' }),
+  error: (
+    options: LogOptions<
+    BaseMessageOptions,
+    SendableChannel
+    >
+  ) => doLog({ ...options, level: 'error' })
 }

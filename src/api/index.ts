@@ -21,6 +21,7 @@ import {
 } from '../types/submission'
 import { VOTING_BUTTONS } from '../utils/buttons'
 import { createEmbed, updateMessage } from '../utils/embed'
+import { runCatching } from '../utils/request'
 import { stringify } from '../utils/stringify'
 import { apiSubmissionSchema } from './schema'
 
@@ -37,7 +38,11 @@ server.post(
     // Validate the JSON shape
     const body = req.body
 
-    logger.debug(`Received incoming request (user-agent: ${req.headers['user-agent']}) (body: ${JSON.stringify(body)})`)
+    logger.debug(
+      `Received incoming request (user-agent: ${
+        req.headers['user-agent']
+      }) (body: ${JSON.stringify(body)})`
+    )
 
     logger.trace('Validating body')
 
@@ -57,13 +62,19 @@ server.post(
     const embed = createEmbed(submission)
     const { privateSubmissions } = config.channels()
 
-    const submissionMessage = await privateSubmissions.send({
-      embeds: [embed],
-      components: [
-        new ActionRowBuilder<ButtonBuilder>()
-          .addComponents(...VOTING_BUTTONS)
-      ]
-    })
+    const submissionMessage = await runCatching(
+      async () =>
+        await privateSubmissions.send({
+          embeds: [embed],
+          components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              ...VOTING_BUTTONS
+            )
+          ]
+        }),
+      'rethrow'
+    )
+
     logger.trace('Sent embed to private submissions channel')
 
     // Create attached review thread
@@ -77,7 +88,9 @@ server.post(
     logger.trace('Saving API data')
     // Save API data to get submission ID and creation date
     const { id: submissionId, submittedAt } = await saveApiData(submission)
-    logger.trace(`Saved API data (id: ${submissionId}) (submittedAt: ${submittedAt.toLocaleString()})`)
+    logger.trace(
+      `Saved API data (id: ${submissionId}) (submittedAt: ${submittedAt.toLocaleString()})`
+    )
 
     // Run critical checks
     logger.trace('Running critical checks')
@@ -86,7 +99,9 @@ server.post(
 
     if (criticalResult.error) {
       logger.error(
-        `Critical check failed for submission ${stringify.submission(submission)} with reason ${criticalResult.message}`
+        `Critical check failed for submission ${stringify.submission(
+          submission
+        )} with reason ${criticalResult.message}`
       )
 
       // Prove we have enough data for a pending submission
@@ -109,7 +124,11 @@ server.post(
 
       // Abort here, we will need user intervention to continue
       res.statusCode = 400
-      return { error: true, statusCode: 400, message: 'Critical check failed.' }
+      return {
+        error: true,
+        statusCode: 400,
+        message: 'Critical check failed.'
+      }
     }
 
     const { author } = criticalResult
@@ -130,7 +149,9 @@ server.post(
       drafts: []
     }
 
-    logger.debug(`Working with submission ${stringify.submission(validatedSubmission)}`)
+    logger.debug(
+      `Working with submission ${stringify.submission(validatedSubmission)}`
+    )
 
     // Set the remaning data needed to make up the validated submission
     await updateAuthorId(validatedSubmission, author.id)
@@ -143,7 +164,11 @@ server.post(
     logger.trace(`Non critical checks pass: ${didChecksPass}`)
 
     if (!didChecksPass) {
-      logger.info(`Non critical checks failed for submission ${stringify.submission(validatedSubmission)}`)
+      logger.info(
+        `Non critical checks failed for submission ${stringify.submission(
+          validatedSubmission
+        )}`
+      )
       // Move to warning state
       await updateSubmissionState(validatedSubmission, 'WARNING')
 

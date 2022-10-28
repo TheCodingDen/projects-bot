@@ -1,5 +1,5 @@
 import { GuildMember, ThreadChannel } from 'discord.js'
-import { threadLog } from '../communication/thread'
+import { genericLog } from '../communication/thread'
 import config from '../config'
 import { ApiSubmission, ValidatedSubmission } from '../types/submission'
 
@@ -32,7 +32,11 @@ export async function runCriticalChecks (
       author: member
     }
   } catch (err) {
-    threadLog.error(`Could not locate author for this submission (${submission.authorId})`, reviewThread)
+    genericLog.error({
+      type: 'text',
+      content: `Could not locate author for this submission (${submission.authorId})`,
+      ctx: reviewThread
+    })
 
     return {
       error: true,

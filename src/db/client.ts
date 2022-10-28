@@ -12,7 +12,11 @@ export async function query<T> (fn: (db: PrismaClient) => T): Promise<T> {
   try {
     return fn(db)
   } catch (err) {
-    internalLog.error(`Database returned an error: ${err}`, undefined)
+    internalLog.error({
+      type: 'text',
+      content: `Database returned an error: ${err}`,
+      ctx: undefined
+    })
     logger.error(`Database returned an error: ${err}`)
     throw err
   }

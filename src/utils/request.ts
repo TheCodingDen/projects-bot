@@ -40,7 +40,11 @@ export async function runCatching<T> (fn: () => Promise<T | undefined> | T | und
     cause = err
   }
 
-  internalLog.error(`Request failure: ${msg}`, undefined)
+  internalLog.error({
+    type: 'text',
+    content: `Request failure: ${msg}`,
+    ctx: undefined
+  })
 
   if (behaviour === 'supress') {
     return undefined

@@ -157,14 +157,15 @@ type PrismaData = PrismaSubmission & {
 async function fetchAuthor (authorId: Snowflake): Promise<GuildMember> {
   logger.trace(`Fetching author by ID ${authorId}`)
   const guild = config.guilds().current
-  return await runCatching(async () => await guild.members.fetch(authorId))
+  return await runCatching(async () => await guild.members.fetch(authorId), 'rethrow')
 }
 
 async function fetchReviewThread (threadId: Snowflake): Promise<ThreadChannel> {
   logger.trace(`Fetching review thread by ID ${threadId}`)
   const { privateSubmissions } = config.channels()
   const reviewThread = await runCatching(
-    async () => await privateSubmissions.threads.fetch(threadId)
+    async () => await privateSubmissions.threads.fetch(threadId),
+    'rethrow'
   )
 
   // Review thread must exist. If not, we cannot continue.
@@ -179,7 +180,8 @@ async function fetchFeedbackThread (
   logger.trace(`Fetching feedback thread by ID ${threadId}`)
   const { publicShowcase } = config.channels()
   const feedbackThread = await runCatching(
-    async () => await publicShowcase.threads.fetch(threadId)
+    async () => await publicShowcase.threads.fetch(threadId),
+    'rethrow'
   )
 
   // Coerce null to undefined for consistency
@@ -193,7 +195,8 @@ async function fetchVotes (prismaVotes: PrismaVote[]): Promise<Vote[]> {
         `Fetching voter by ID on submission ${v.submissionId} ${v.voterId}`
       )
       const voter = await runCatching(
-        async () => await config.guilds().current.members.fetch(v.voterId)
+        async () => await config.guilds().current.members.fetch(v.voterId),
+        'rethrow'
       )
 
       const vote = {
@@ -217,7 +220,8 @@ async function fetchDrafts (prismaDrafts: PrismaDraft[]): Promise<Draft[]> {
         )
 
         const author = await runCatching(
-          async () => await config.guilds().current.members.fetch(d.authorId)
+          async () => await config.guilds().current.members.fetch(d.authorId),
+          'rethrow'
         )
 
         const draft = {
@@ -239,7 +243,8 @@ async function fetchOriginalMessage (messageId: Snowflake): Promise<Message> {
   logger.trace(`Fetching original message by ID ${messageId}`)
 
   return await runCatching(
-    async () => await privateSubmissions.messages.fetch(messageId)
+    async () => await privateSubmissions.messages.fetch(messageId),
+    'rethrow'
   )
 }
 

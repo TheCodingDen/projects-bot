@@ -6,6 +6,7 @@ import {
   fetchSubmissionsByMemberId,
   updateSubmissionState
 } from '../db/submission'
+import { runCatching } from '../utils/request'
 
 export async function handleMemberLeaveEvent (
   member: GuildMember | PartialGuildMember
@@ -21,25 +22,31 @@ export async function handleMemberLeaveEvent (
       return
     }
 
+    // Supress these errors so that we can update the state and log later on
     const { privateSubmissions } = config.channels()
-    const reviewThread = await privateSubmissions.threads.fetch(reviewThreadId)
+    const reviewThread = await runCatching(
+      async () => await privateSubmissions.threads.fetch(reviewThreadId),
+      'supress'
+    )
 
     if (!reviewThread) {
       logger.info('reviewThread was null (guild member left)')
-      return
     }
 
-    const submissionMessage = await privateSubmissions.messages.fetch(
-      submissionMessageId
+    const submissionMessage = await runCatching(
+      async () => await privateSubmissions.messages.fetch(submissionMessageId),
+      'supress'
     )
 
-    await reviewThread.setArchived(true)
-    await submissionMessage.delete()
+    await reviewThread?.setArchived(true)
+    await submissionMessage?.delete()
 
     await updateSubmissionState(submission, 'DENIED')
-    privateLog.info(
-      'Silently rejected submission because author left the guild.',
-      submission
-    )
+
+    privateLog.info({
+      type: 'text',
+      content: 'Silently rejected submission because author left the guild.',
+      ctx: submission
+    })
   }
 }

@@ -1,4 +1,5 @@
 import { VoteRole } from '@prisma/client'
+import assert from 'assert'
 import { GuildMember } from 'discord.js'
 import config from '../config'
 
@@ -26,6 +27,6 @@ export function toVoteRole (voter: GuildMember): VoteRole {
   } else if (roles.has(veterans.id)) {
     return 'VETERANS'
   } else {
-    throw new Error(`voter ${voter.displayName} is not veterans or staff`)
+    assert(false, `voter ${voter.displayName} is not veterans or staff`)
   }
 }

@@ -18,12 +18,18 @@ import {
   updateTechnologies,
   validatePendingSubmission
 } from '../db/submission'
-import { PendingSubmission, ValidatedSubmission } from '../types/submission'
+import {
+  isValidated,
+  PendingSubmission,
+  ValidatedSubmission
+} from '../types/submission'
 import { fetchSubmissionForContext } from '../utils/commands'
 import { DEFAULT_MESSAGE_OPTS_SLASH } from '../utils/communication'
 import { getAssignedGuilds } from '../utils/discordUtils'
 import { createEmbed, updateMessage } from '../utils/embed'
+import { runCatching } from '../utils/request'
 import { stringify } from '../utils/stringify'
+import { updateThreadName } from '../utils/thread'
 
 export default class EditCommand extends SlashCommand {
   constructor (creator: SlashCreator) {
@@ -96,10 +102,12 @@ export default class EditCommand extends SlashCommand {
       case 'author':
         // Only allow author updates in error state
         if (submission.state !== 'ERROR') {
-          commandLog.warning(
-            'Cannot update author if the submission is not in an error state.',
+          commandLog.warning({
+            type: 'text',
+            content:
+              'Cannot update author if the submission is not in an error state.',
             ctx
-          )
+          })
           return
         }
         oldValue = submission.authorId
@@ -142,7 +150,7 @@ export default class EditCommand extends SlashCommand {
 
     await ctx.sendModal(
       {
-        title: `Edit the ${subcommand} of ${submission.name}`,
+        title: `Edit the ${subcommand}`,
         components: [
           {
             type: ComponentType.ACTION_ROW,
@@ -179,12 +187,16 @@ export default class EditCommand extends SlashCommand {
     )
 
     // Wait for the update to complete
-    await updateFn(newValue)
+    // Rethrows because if we fail to update, we wont be able to validate below
+    await runCatching(() => updateFn(newValue), 'rethrow')
 
     // Already validated
-    if (submission.state !== 'WARNING' && submission.state !== 'ERROR') {
-      const validated = submission as ValidatedSubmission
-      await updateMessage(validated.submissionMessage, createEmbed(submission))
+    if (isValidated(submission)) {
+      await updateMessage(
+        submission.submissionMessage,
+        createEmbed(submission)
+      )
+      await updateThreadName(submission.reviewThread, submission.name)
 
       await mctx.send({
         content: `Updated the ${subcommand} successfuly`,
@@ -197,6 +209,7 @@ export default class EditCommand extends SlashCommand {
     // Submission should be valid after calling updateFn
     const validated = await validatePendingSubmission(submission)
     await updateMessage(validated.submissionMessage, createEmbed(submission))
+    await updateThreadName(validated.reviewThread, validated.name)
     await mctx.send({
       content: `Updated the ${subcommand} successfuly`,
       ...DEFAULT_MESSAGE_OPTS_SLASH,

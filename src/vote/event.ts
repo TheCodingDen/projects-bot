@@ -3,52 +3,74 @@ import { interactionLog } from '../communication/interaction'
 import { internalLog } from '../communication/internal'
 import { fetchSubmissionByMessageId } from '../db/submission'
 import { removeVote } from '../db/vote'
+import { isValidated } from '../types/submission'
 import { Vote, VoteType } from '../types/vote'
 import { createEmbed, updateMessage } from '../utils/embed'
 import { stringify } from '../utils/stringify'
 import { canVote, toVoteRole } from '../utils/vote'
-import { downvote, pause, unpause, upvote, voteRejectsSubmission } from './action'
+import {
+  downvote,
+  pause,
+  unpause,
+  upvote,
+  voteRejectsSubmission
+} from './action'
 import { VoteModificationResult } from './result'
 
 export async function handleButtonEvent (
   event: ButtonInteraction<'cached'>
 ): Promise<void> {
   const { member, channel, message, customId } = event
-  logger.debug(`Starting button event for ${stringify.user(member.user)} in ${stringify.channel(channel)} with type ${customId}`)
+  logger.debug(
+    `Starting button event for ${stringify.user(
+      member.user
+    )} in ${stringify.channel(channel)} with type ${customId}`
+  )
 
   const submission = await fetchSubmissionByMessageId(message.id)
   const rawType = customId
 
   if (!submission) {
-    internalLog.error(
-      `Could not locate submission for message id ${message.id}`,
-      undefined
-    )
+    internalLog.error({
+      type: 'text',
+      content: `Could not locate submission for message id ${message.id}`,
+      ctx: undefined
+    })
     return
   }
 
   if (!canVote(member)) {
-    interactionLog.warning('You are not staff or veteran, so you cannot vote.', event)
+    interactionLog.warning({
+      type: 'text',
+      content: 'You are not staff or veteran, so you cannot vote.',
+      ctx: event
+    })
     return
   }
 
   // Users cannot vote on pending or paused submissions
-  if (!(submission.state === 'PROCESSING' || submission.state === 'PAUSED')) {
+  if (!isValidated(submission)) {
     logger.debug(`Rejecting button as state is ${submission.state}`)
-    interactionLog.warning(
-      'Sorry, that submission is not available for voting at this time.',
-      event
-    )
+    interactionLog.warning({
+      type: 'text',
+      content:
+        'Sorry, that submission is not available for voting at this time.',
+      ctx: event
+    })
     return
   }
 
   // If the submission is paused and we arent attempting to unpause reject the vote
   if (rawType !== 'pause' && submission.state === 'PAUSED') {
-    logger.debug(`Rejecting button as state is PAUSED and rawType is ${rawType}`)
-    interactionLog.error(
-      'Could not action your vote because this submission is paused for voting at this time.',
-      event
+    logger.debug(
+      `Rejecting button as state is PAUSED and rawType is ${rawType}`
     )
+    interactionLog.error({
+      type: 'text',
+      content:
+        'Could not action your vote because this submission is paused for voting at this time.',
+      ctx: event
+    })
     return
   }
 
@@ -75,16 +97,18 @@ export async function handleButtonEvent (
 
   // This won't interfere with unpausing because we dont store pause votes
   const existingVote = submission.votes.find(
-    (v) =>
-      v.role === vote.role &&
-      v.voter.id === vote.voter.id
+    (v) => v.role === vote.role && v.voter.id === vote.voter.id
   )
 
   // You have a vote but you arent trying to pause or unpause
-  if (existingVote && (type !== 'PAUSE' && type !== 'UNPAUSE')) {
+  if (existingVote && type !== 'PAUSE' && type !== 'UNPAUSE') {
     if (existingVote.type !== type) {
       // Attempted to add an unrelated vote whilst already having one
-      interactionLog.warning('You cannot add an upvote and a downvote.', event)
+      interactionLog.warning({
+        type: 'text',
+        content: 'You cannot add an upvote and a downvote.',
+        ctx: event
+      })
       return
     }
 
@@ -98,15 +122,27 @@ export async function handleButtonEvent (
     await removeVote(vote, submission)
     await updateMessage(submission.submissionMessage, createEmbed(submission))
 
-    interactionLog.info(`Removed ${existingVote.type.toLowerCase()}.`, event)
+    interactionLog.info({
+      type: 'text',
+      content: `Removed ${existingVote.type.toLowerCase()}.`,
+      ctx: event
+    })
     return
   }
 
   // If this vote rejects a project, ensure a draft rejection reason is set.
   const hasDraft = submission.drafts[0] !== undefined
 
-  if (type === 'DOWNVOTE' && voteRejectsSubmission(vote, submission) && !hasDraft) {
-    interactionLog.error('Cannot reject without a draft set', event)
+  if (
+    type === 'DOWNVOTE' &&
+    voteRejectsSubmission(vote, submission) &&
+    !hasDraft
+  ) {
+    interactionLog.error({
+      type: 'text',
+      content: 'Cannot reject without a draft set',
+      ctx: event
+    })
     return
   }
 
@@ -128,7 +164,11 @@ export async function handleButtonEvent (
   }
 
   if (voteRes.error) {
-    interactionLog.error('Failed to cast vote, internal error occured', event)
+    interactionLog.error({
+      type: 'text',
+      content: 'Failed to cast vote, internal error occured',
+      ctx: event
+    })
     logger.error(voteRes.message)
     return
   }
@@ -136,10 +176,22 @@ export async function handleButtonEvent (
   // Log in the cases where the cleanup has not occured (so that the thread exists)
   const outcome = voteRes.outcome
   if (outcome === 'vote-add') {
-    interactionLog.info(`Applied ${vote.type.toLowerCase()}.`, event)
+    interactionLog.info({
+      type: 'text',
+      content: `Applied ${vote.type.toLowerCase()}.`,
+      ctx: event
+    })
   } else if (outcome === 'pause') {
-    interactionLog.info('Paused the submission for voting.', event)
+    interactionLog.info({
+      type: 'text',
+      content: 'Paused the submission for voting.',
+      ctx: event
+    })
   } else if (outcome === 'unpause') {
-    interactionLog.info('Unpaused the submission for voting.', event)
+    interactionLog.info({
+      type: 'text',
+      content: 'Unpaused the submission for voting.',
+      ctx: event
+    })
   }
 }

@@ -12,7 +12,7 @@ export type SubmissionState = 'RAW' | 'WARNING' | 'PROCESSING' | 'PAUSED' | 'ERR
 /**
  * Represents a general submission which could be in any state.
  */
-export type Submission = ApiSubmission | PendingSubmission | ValidatedSubmission | CompletedSubmission
+export type AnySubmission = ApiSubmission | PendingSubmission | ValidatedSubmission | CompletedSubmission
 
 /**
  * The base submission type, has no additional data.
@@ -78,4 +78,35 @@ export interface CompletedSubmission extends BaseSubmission {
 
   // Author may no longer exist when we fetch in this state
   author?: GuildMember
+}
+
+// These type guards exist for more readable code, and better TS behavior
+// TS struggles to infer the types in some cases, and this should help with that.
+
+/**
+ * Returns whether a submission is in the raw / API state.
+ */
+export function isRaw (submission: AnySubmission): submission is ApiSubmission {
+  return submission.state === 'RAW'
+}
+
+/**
+ * Returns whether a submission is in the pending state.
+ */
+export function isPending (submission: AnySubmission): submission is PendingSubmission {
+  return submission.state === 'WARNING' || submission.state === 'ERROR'
+}
+
+/**
+ * Returns whether a submission is in the valided state.
+ */
+export function isValidated (submission: AnySubmission): submission is ValidatedSubmission {
+  return submission.state === 'PROCESSING' || submission.state === 'PAUSED'
+}
+
+/**
+ * Returns whether a submission is in the completed state.
+ */
+export function isCompleted (submission: AnySubmission): submission is CompletedSubmission {
+  return submission.state === 'ACCEPTED' || submission.state === 'DENIED'
 }

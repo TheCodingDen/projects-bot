@@ -1,7 +1,17 @@
-import { ChannelType, Message, MessageCreateOptions, ThreadChannel } from 'discord.js'
+import {
+  ChannelType,
+  Message,
+  MessageCreateOptions,
+  ThreadChannel
+} from 'discord.js'
 import config from '../config'
 import { updateFeedbackThreadId } from '../db/submission'
-import { PendingSubmission, ValidatedSubmission } from '../types/submission'
+import {
+  isValidated,
+  PendingSubmission,
+  ValidatedSubmission
+} from '../types/submission'
+import { runCatching } from './request'
 
 interface ThreadCreated {
   didMakeThread: true
@@ -24,25 +34,30 @@ export async function sendMessageToFeedbackThread (
   submission: ValidatedSubmission | PendingSubmission
 ): Promise<ThreadExisted | ThreadCreated> {
   // Send to existing thread if it exists
-  if (submission.state === 'PROCESSING') {
-    if (submission.feedbackThread) {
+  if (isValidated(submission)) {
+    const thread = submission.feedbackThread
+    if (thread) {
       return {
         didMakeThread: false,
-        message: await submission.feedbackThread.send(message)
+        message: await runCatching(async () => await thread.send(message), 'rethrow')
       }
     }
   }
 
   // If not, make one
   const { publicShowcase } = config.channels()
-  const feedbackThread = await publicShowcase.threads.create({
-    name: submission.name,
-    // This cannot be abstracted anywhere because we need to keep the union around
-    type:
-      process.env.NODE_ENV === 'production'
-        ? ChannelType.PrivateThread
-        : ChannelType.PublicThread
-  })
+  const feedbackThread = await runCatching(
+    async () =>
+      await publicShowcase.threads.create({
+        name: submission.name,
+        // This cannot be abstracted anywhere because we need to keep the union around
+        type:
+          process.env.NODE_ENV === 'production'
+            ? ChannelType.PrivateThread
+            : ChannelType.PublicThread
+      }),
+    'rethrow'
+  )
 
   await updateFeedbackThreadId(submission, feedbackThread.id)
 
@@ -51,4 +66,18 @@ export async function sendMessageToFeedbackThread (
     thread: feedbackThread,
     message: await feedbackThread.send(message)
   }
+}
+
+/**
+ * Updates the name of the thread if it differs from the provided name.
+ */
+export async function updateThreadName (
+  thread: ThreadChannel,
+  newName: string
+): Promise<void> {
+  if (thread.name === newName) {
+    return
+  }
+
+  await runCatching(async () => await thread.setName(newName), 'supress')
 }
