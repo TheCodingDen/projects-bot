@@ -1,5 +1,6 @@
 import assert from 'assert'
-import { ChannelType, GuildMember, Message } from 'discord.js'
+import { EmbedField, GuildMember, Message } from 'discord.js'
+import { client } from '..'
 import { privateLog } from '../communication/private'
 import config from '../config'
 import {
@@ -208,7 +209,8 @@ export async function accept (
         {
           name: 'Author',
           value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
-        }
+        },
+        ...generateVoteFields(submission.votes)
       ],
       color: config.colours().log.accepted
     },
@@ -234,8 +236,26 @@ export async function reject (
   const draft = submission.drafts[0]
   assert(!!draft, 'cannot reject without a draft')
 
-  const reviewers = await submission.reviewThread.members.fetch()
-  const formattedReviewers = reviewers.filter(v => !v.user?.bot).map(v => `<@${v.id}>`)
+  await addVote(vote, submission)
+  submission.votes.push(vote)
+
+  const threadMembers = await Promise.all(
+    // Re-fetch *all* the users because for some idiotic reason, "members.fetch"
+    // does not actually fetch members..? "member.user" becomes nullable which would
+    // cause the check to erroneously fail in some cases where the user wasnt cached.
+    (
+      await submission.reviewThread.members.fetch()
+    ).map(async (v) => await client.users.fetch(v.id))
+  )
+
+  const voters = submission.votes.map((v) => v.voter.user)
+
+  // Converting to a Set removes duplicates. It's the easiest way to do this in JS.
+  const reviewers = [...new Set([...threadMembers, ...voters])]
+
+  const formattedReviewers = reviewers
+    .filter((v) => !v.bot && v.id !== submission.authorId)
+    .map((v) => `<@${v.id}>`)
 
   const rejectionMessage = `
 Reviewers: ${formattedReviewers}
@@ -246,26 +266,15 @@ ${draft.content}
 \`\`\`
 `
 
-  await addVote(vote, submission)
-  submission.votes.push(vote)
+  const { message: sentMessage, thread: feedbackThread } =
+    await sendMessageToFeedbackThread(
+      {
+        content: rejectionMessage
+      },
+      submission
+    )
 
-  // TODO: extract this into a helper function
-  const { publicShowcase } = config.channels()
-  const feedbackThread = await publicShowcase.threads.create({
-    name: submission.name,
-    // This cannot be abstracted anywhere because we need to keep the union around
-    type:
-      process.env.NODE_ENV === 'production'
-        ? ChannelType.PrivateThread
-        : ChannelType.PublicThread
-  })
-
-  const sentMessage = await feedbackThread.send({
-    content: rejectionMessage
-  })
-
-  const filter = (m: Message): boolean =>
-    reviewers.has(m.author.id) && m.channelId === feedbackThread.id
+  const filter = (m: Message): boolean => m.channelId === feedbackThread.id
 
   await feedbackThread.awaitMessages({ filter, max: 1 })
 
@@ -292,7 +301,8 @@ ${draft.content}
         {
           name: 'Author',
           value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
-        }
+        },
+        ...generateVoteFields(submission.votes)
       ],
       color: config.colours().log.denied
     },
@@ -401,9 +411,7 @@ export function voteAcceptsSubmission (
 ): boolean {
   assert(vote.type === 'UPVOTE', `expected UPVOTE, got ${vote.type}`)
   // Get all upvotes
-  const votes = submission.votes
-    .filter((v) => v.type === 'UPVOTE')
-    .length
+  const votes = submission.votes.filter((v) => v.type === 'UPVOTE').length
 
   const { threshold } = config.vote()
   return votes + 1 >= threshold
@@ -420,10 +428,31 @@ export function voteRejectsSubmission (
 ): boolean {
   assert(vote.type === 'DOWNVOTE', `expected DOWNVOTE, got ${vote.type}`)
   // Get all downvotes
-  const votes = submission.votes
-    .filter((v) => v.type === 'DOWNVOTE')
-    .length
+  const votes = submission.votes.filter((v) => v.type === 'DOWNVOTE').length
 
   const { threshold } = config.vote()
   return votes + 1 >= threshold
+}
+
+function generateVoteFields (votes: Vote[]): [EmbedField, EmbedField] {
+  const upvotes = votes.filter((v) => v.type === 'UPVOTE')
+  const downvotes = votes.filter((v) => v.type === 'DOWNVOTE')
+
+  const upvoteString =
+    upvotes.map((v) => `${v.voter.user.tag}`).join('\n') || 'None'
+  const downvoteString =
+    downvotes.map((v) => `${v.voter.user.tag}`).join('\n') || 'None'
+
+  return [
+    {
+      name: `Upvotes (${upvotes.length})`,
+      value: upvoteString,
+      inline: true
+    },
+    {
+      name: `Downvotes (${downvotes.length})`,
+      value: downvoteString,
+      inline: true
+    }
+  ]
 }

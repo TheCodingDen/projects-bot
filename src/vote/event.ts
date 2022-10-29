@@ -148,6 +148,11 @@ export async function handleButtonEvent (
 
   let voteRes: VoteModificationResult
 
+  // Defer because the actions could take some time
+  await event.deferReply({
+    ephemeral: true
+  })
+
   switch (type) {
     case 'UPVOTE':
       voteRes = await upvote(vote, submission)
@@ -173,12 +178,24 @@ export async function handleButtonEvent (
     return
   }
 
-  // Log in the cases where the cleanup has not occured (so that the thread exists)
   const outcome = voteRes.outcome
+
   if (outcome === 'vote-add') {
     interactionLog.info({
       type: 'text',
       content: `Applied ${vote.type.toLowerCase()}.`,
+      ctx: event
+    })
+  } else if (outcome === 'reject') {
+    interactionLog.info({
+      type: 'text',
+      content: 'Rejected the submission.',
+      ctx: event
+    })
+  } else if (outcome === 'accept') {
+    interactionLog.info({
+      type: 'text',
+      content: 'Accepted the submission.',
       ctx: event
     })
   } else if (outcome === 'pause') {

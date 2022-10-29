@@ -16,6 +16,7 @@ import * as api from './api'
 import * as exceptions from './utils/exception'
 import { handleButtonEvent } from './vote/event'
 import { handleMemberLeaveEvent } from './event/memberLeave'
+import { internalLog } from './communication/internal'
 
 // Register global exception handler
 exceptions.setup()
@@ -46,9 +47,15 @@ creator.on('commandRun', (command, _, ctx) =>
 creator.on('commandRegister', (command) =>
   logger.info(`Registered command ${command.commandName}`)
 )
-creator.on('commandError', (command, error) =>
+creator.on('commandError', (command, error) => {
   logger.error(`Command ${command.commandName}: ${error.message} \n ${error.stack}`)
-)
+
+  internalLog.error({
+    type: 'text',
+    content: `Error running command ${command.commandName}: ${error.message} \n ${error.stack}`,
+    ctx: undefined
+  })
+})
 
 // The button events we handle through djs itself
 const OUR_BUTTONS = ['pause', 'upvote', 'downvote']

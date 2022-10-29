@@ -145,7 +145,7 @@ function createProcessingEmbed (submission: ValidatedSubmission): APIEmbed {
     .setFields(
       {
         name: 'Submitter',
-        value: `<@${submission.author.id}> (${submission.author.user.tag}) (${submission.authorId})`
+        value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.authorId})`
       },
       {
         name: 'Source',

@@ -21,6 +21,7 @@ interface ThreadCreated {
 
 interface ThreadExisted {
   didMakeThread: false
+  thread: ThreadChannel
   message: Message
 }
 
@@ -39,6 +40,7 @@ export async function sendMessageToFeedbackThread (
     if (thread) {
       return {
         didMakeThread: false,
+        thread,
         message: await runCatching(async () => await thread.send(message), 'rethrow')
       }
     }

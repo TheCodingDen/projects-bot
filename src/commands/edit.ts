@@ -190,8 +190,12 @@ export default class EditCommand extends SlashCommand {
     // Rethrows because if we fail to update, we wont be able to validate below
     await runCatching(() => updateFn(newValue), 'rethrow')
 
+    logger.trace('Set successfuly')
+
     // Already validated
     if (isValidated(submission)) {
+      logger.trace('Submission already validated')
+
       await updateMessage(
         submission.submissionMessage,
         createEmbed(submission)
@@ -206,6 +210,7 @@ export default class EditCommand extends SlashCommand {
       return
     }
 
+    logger.trace('Submission not validated, running validation')
     // Submission should be valid after calling updateFn
     const validated = await validatePendingSubmission(submission)
     await updateMessage(validated.submissionMessage, createEmbed(submission))

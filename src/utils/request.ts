@@ -16,13 +16,7 @@ export async function runCatching<T> (fn: () => Promise<T | undefined> | T | und
   let cause
 
   try {
-    const res = await fn()
-
-    if (res) {
-      return res
-    }
-
-    msg = 'Value was not present'
+    return await fn()
   } catch (err) {
     if (err === undefined || err === null) {
       msg = 'null'

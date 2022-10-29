@@ -28,6 +28,15 @@ function genericInteractionLog (
         }),
       'rethrow'
     )
+  } else if (interaction.deferred) {
+    void runCatching(
+      async () =>
+        await interaction.followUp({
+          ...makeDjsMessageOpts(options),
+          ...DEFAULT_MESSAGE_OPTS_DJS
+        }),
+      'rethrow'
+    )
   } else {
     void runCatching(
       async () =>

@@ -95,7 +95,7 @@ server.post(
     // Run critical checks
     logger.trace('Running critical checks')
     const criticalResult = await runCriticalChecks(submission, reviewThread)
-    logger.trace(`Critical checks pass: ${criticalResult.error}`)
+    logger.trace(`Critical checks pass: ${!criticalResult.error}`)
 
     if (criticalResult.error) {
       logger.error(
