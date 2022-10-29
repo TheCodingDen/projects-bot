@@ -64,7 +64,8 @@ export default class DraftCommand extends SlashCommand {
     if (submission.state !== 'PROCESSING') {
       commandLog.warning({
         type: 'text',
-        content: 'Cannot use drafts on a pending or paused submission, please resolve issues and retry.',
+        content:
+          'Cannot use drafts on a pending or paused submission, please resolve issues and retry.',
         ctx
       })
       return
@@ -246,9 +247,21 @@ timestamp: ${draft.timestamp.toLocaleString()}
 
         void createDraft(newValue, mctx.user.id, submission.id)
 
-        void mctx.send({
-          content: 'Added new draft successfully.'
-        })
+        void runCatching(
+          async () =>
+            await mctx.send({
+              content: 'Added new draft successfully.'
+            }),
+          'rethrow'
+        )
+
+        void runCatching(
+          async () =>
+            await mctx.sendFollowUp({
+              content: newValue
+            }),
+          'rethrow'
+        )
       }
     )
   }
@@ -277,7 +290,10 @@ id: ${current.id}
 author: ${current.author.user.tag}
 timestamp: ${current.timestamp.toLocaleString()}
 `,
-      ctx
+      ctx,
+      extraOpts: {
+        ephemeral: false
+      }
     })
   }
 }

@@ -113,14 +113,21 @@ server.post(
         state: 'ERROR'
       }
 
+      logger.trace('Setting state and message')
+
       // Move to error state
       await updateSubmissionState(pendingSubmission, 'ERROR')
       await updateMessage(submissionMessage, createEmbed(pendingSubmission))
 
+      logger.trace('Set state and message')
+
       // Set the remaning data we have, still not enough for a fully validated submission
       // but we still managed to get the thread and message
+
+      logger.trace('Setting remaining data (review thread id and submission message id)')
       await updateReviewThreadId(pendingSubmission, reviewThread.id)
       await updateSubmissionMessageId(pendingSubmission, submissionMessage.id)
+      logger.trace('Set remaining data (review thread id and submission message id)')
 
       // Abort here, we will need user intervention to continue
       res.statusCode = 400
@@ -154,9 +161,11 @@ server.post(
     )
 
     // Set the remaning data needed to make up the validated submission
+    logger.trace('Setting author id, review thread id, submission message id')
     await updateAuthorId(validatedSubmission, author.id)
     await updateReviewThreadId(validatedSubmission, reviewThread.id)
     await updateSubmissionMessageId(validatedSubmission, submissionMessage.id)
+    logger.trace('Set author id, review thread id, submission message id')
 
     logger.trace('Running non critical checks')
     // Run non critical checks
@@ -170,7 +179,9 @@ server.post(
         )}`
       )
       // Move to warning state
+      logger.trace('Updating submission state to WARNING')
       await updateSubmissionState(validatedSubmission, 'WARNING')
+      logger.trace('Updated submission state to WARNING')
 
       const pendingSubmission: PendingSubmission = {
         ...validatedSubmission,
@@ -180,8 +191,10 @@ server.post(
       await updateMessage(submissionMessage, createEmbed(pendingSubmission))
     } else {
       // Update the embed with our new data
+      logger.trace('Updating submission state to PROCESSING')
       await updateSubmissionState(validatedSubmission, 'PROCESSING')
       await updateMessage(submissionMessage, createEmbed(validatedSubmission))
+      logger.trace('Updated submission state to PROCESSING')
     }
 
     res.statusCode = 204
