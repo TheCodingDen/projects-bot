@@ -35,8 +35,18 @@ export async function runCatching<T> (fn: () => Promise<T | undefined> | T | und
       typeof err === 'boolean'
     ) {
       msg = `Primitive: ${err.toString()}`
+    } else if (err instanceof Error) {
+      msg = `Error (${err.name}) ${err.message} \n ${err.stack}`
     }
 
+    // All objects have this function, it just might not be overriden
+    // we are attempting a last ditch effort to get *some* logs out.
+    msg = (err as any)?.toString() ?? 'unknown'
+
+    logger.error('Request failure:')
+    logger.error(err)
+
+    // Set the cause for later throwing, outside of this scope
     cause = err
   }
 

@@ -22,9 +22,15 @@ export async function fetchSubmissionForContext (ctx: CommandContext): Promise<V
   const submission = await fetchSubmissionByThreadId(id)
 
   if (!submission) {
+    commandLog.error({
+      type: 'text',
+      content: `Could not look up submission for channel ID ${id}`,
+      ctx
+    })
+
     return void internalLog.error({
       type: 'text',
-      content: `Could not look up submission for thread ID ${id}`,
+      content: `Could not look up submission for channel ID ${id}`,
       ctx: undefined
     })
   }

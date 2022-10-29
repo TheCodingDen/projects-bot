@@ -87,8 +87,25 @@ export async function pause (
   await updateMessage(submission.submissionMessage, createEmbed(submission))
 
   privateLog.info({
-    type: 'text',
-    content: `<@${vote.voter.id}> paused the submission.`,
+    type: 'embed',
+    embed: {
+      title: submission.name,
+      description: `**${vote.voter.user.tag}** **__PAUSED__** the submission for voting.`,
+      fields: [
+        {
+          name: 'ID',
+          value: submission.id
+        },
+        {
+          name: 'Source',
+          value: submission.links.source
+        },
+        {
+          name: 'Author',
+          value: `<@${submission.authorId}> (${submission.authorId})`
+        }
+      ]
+    },
     ctx: submission
   })
 
@@ -116,8 +133,25 @@ export async function unpause (
   await updateMessage(submission.submissionMessage, createEmbed(submission))
 
   privateLog.info({
-    type: 'text',
-    content: `<@${vote.voter.id}> unpaused the submission.`,
+    type: 'embed',
+    embed: {
+      title: submission.name,
+      description: `**${vote.voter.user.tag}** **__UNPAUSED__** the submission for voting.`,
+      fields: [
+        {
+          name: 'ID',
+          value: submission.id
+        },
+        {
+          name: 'Source',
+          value: submission.links.source
+        },
+        {
+          name: 'Author',
+          value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
+        }
+      ]
+    },
     ctx: submission
   })
 
@@ -156,10 +190,29 @@ export async function accept (
   })
 
   privateLog.info({
-    type: 'text',
-    content: `<@${vote.voter.id}> accepted the submission.`,
+    type: 'embed',
+    embed: {
+      title: submission.name,
+      description: `**${vote.voter.user.tag}** **__ACCEPTED__** the submission.`,
+      fields: [
+        {
+          name: 'ID',
+          value: submission.id
+        },
+        {
+          name: 'Source',
+          value: submission.links.source
+        },
+        {
+          name: 'Author',
+          value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
+        }
+      ]
+    },
     ctx: submission
   })
+
+  await updateSubmissionState(submission, 'ACCEPTED')
 
   return {
     error: false,
@@ -220,10 +273,29 @@ ${draft.content}
   await submission.submissionMessage.delete()
 
   privateLog.info({
-    type: 'text',
-    content: `<@${vote.voter.id}> rejected the submission.`,
+    type: 'embed',
+    embed: {
+      title: submission.name,
+      description: `**${vote.voter.user.tag}** **__REJECTED__** the submission.`,
+      fields: [
+        {
+          name: 'ID',
+          value: submission.id
+        },
+        {
+          name: 'Source',
+          value: submission.links.source
+        },
+        {
+          name: 'Author',
+          value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
+        }
+      ]
+    },
     ctx: submission
   })
+
+  await updateSubmissionState(submission, 'DENIED')
 
   return {
     error: false,
@@ -263,8 +335,25 @@ export async function forceReject (
   )
 
   privateLog.info({
-    type: 'text',
-    content: `<@${voter.id}> force-rejected the submission. (reason: ${details.rawReason})`,
+    type: 'embed',
+    embed: {
+      title: submission.name,
+      description: `**${voter.user.tag}** **__FORCE-REJECTED__** the submission.`,
+      fields: [
+        {
+          name: 'ID',
+          value: submission.id
+        },
+        {
+          name: 'Source',
+          value: submission.links.source
+        },
+        {
+          name: 'Author',
+          value: `<@${submission.authorId}> (${submission.authorId})`
+        }
+      ]
+    },
     ctx: submission
   })
 

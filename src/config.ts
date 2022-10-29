@@ -111,12 +111,20 @@ const config = {
       PROCESSING: 0X90C8AC,
       RAW: 0X90C8AC
     },
+    // TODO: pick these colours
     log: {
-      info: 0xDEADBEEF,
-      warning: 0xDEADBEEF,
-      error: 0xDEADBEEF
+      info: 0x90C8AC,
+      warning: 0XE5EBB2,
+      error: 0XFF7878
     },
     publicEmbed: 0x4A90E2
+  }),
+  /**
+   * Config for using the GitHub API in the bot.
+   *
+   */
+  github: () => ({
+    token: env.string('GITHUB_API_TOKEN')
   })
 }
 

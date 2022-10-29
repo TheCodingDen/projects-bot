@@ -17,7 +17,7 @@ function genericLog (
 
   void runCatching(
     async () =>
-      await config.channels().internalLogs.send({
+      await config.channels().privateLogs.send({
         ...makeDjsMessageOpts(options),
         ...DEFAULT_MESSAGE_OPTS_DJS
       }),

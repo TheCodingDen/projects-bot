@@ -53,15 +53,29 @@ export default class ClearCommand extends SlashCommand {
       commandLog.info({
         type: 'text',
         content: 'Cleared warnings successfully.',
-        extraOpts: {
-          ephemeral: true
-        },
         ctx
       })
 
       privateLog.info({
-        type: 'text',
-        content: `${ctx.user.mention} cleared warnings.`,
+        type: 'embed',
+        embed: {
+          title: validated.name,
+          description: `**${ctx.user.username}#${ctx.user.discriminator}** cleared warnings.`,
+          fields: [
+            {
+              name: 'ID',
+              value: validated.id
+            },
+            {
+              name: 'Source',
+              value: validated.links.source
+            },
+            {
+              name: 'Author',
+              value: `<@${validated.author.id}> (${validated.author.user.tag}, ${validated.author.id})`
+            }
+          ]
+        },
         ctx: validated
       })
     } catch (err) {
