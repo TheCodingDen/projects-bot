@@ -39,11 +39,11 @@ const config = {
      * This is used in the feedback thread.
      */
     templates: {
-      'no-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and let us know so we can process your submission. See <https://choosealicense.com/> for more information`,
-      'invalid-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because it contains a non-OSI license or the license is not immediately visible in the root of the project. Please use an OSI license in a file called LICENSE, LICENSE.txt or LICENSE.md and then let us know so we can process your submission. See <https://choosealicense.com/> for more information.`,
-      'inaccessable-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository link could not be accessed. Please double check the URL, privacy settings and account information, then provide us with a URL so we can process your submission.`,
-      'empty-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository was empty. Please double check the URL and account information, then provide us with a URL so we can process your submission.`,
-      'invalid-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided link did not point to a valid GitHub or GitLab repository. Please double check the URL and account information, then provide us with a URL so we can process your submission.`,
+      'no-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and then resubmit. See <https://choosealicense.com/> for more information`,
+      'invalid-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because it contains a non-OSI license or the license is not immediately visible in the root of the project. Please use an OSI license in a file called LICENSE, LICENSE.txt or LICENSE.md and resubmit. See <https://choosealicense.com/> for more information.`,
+      'inaccessable-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository link could not be accessed. Please double check the URL, privacy settings and account information, then resubmit.`,
+      'empty-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository was empty. Please double check the URL and account information, then resubmit.`,
+      'invalid-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided link did not point to a valid GitHub or GitLab repository. Please double check the URL and account information, then resubmit`,
       'invalid-id': ({ name }: RejectionParams) => `To whomever submitted "${name}", the provided ID was invalid. Please provide us with your ID so we can process your submission. For help with getting your ID, see <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`,
       plagiarism: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is blatant plagiarism. Do not resubmit and do not submit plagiarised projects again.`,
       ad: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is an advertisement to another service / platform. This goes against our policy on advertisements <https://docs.thecodingden.net/community-policy-center/rules#ads>. Do not resubmit this project.`
@@ -113,9 +113,13 @@ const config = {
     },
     // TODO: pick these colours
     log: {
-      info: 0x90C8AC,
+      info: 0X90C8AC,
       warning: 0XE5EBB2,
-      error: 0XFF7878
+      error: 0XFF7878,
+
+      accepted: 0X08FF08,
+      pause: 0XCCFF00,
+      denied: 0XD41920
     },
     publicEmbed: 0x4A90E2
   }),

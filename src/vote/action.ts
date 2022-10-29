@@ -104,7 +104,8 @@ export async function pause (
           name: 'Author',
           value: `<@${submission.authorId}> (${submission.authorId})`
         }
-      ]
+      ],
+      color: config.colours().log.pause
     },
     ctx: submission
   })
@@ -150,7 +151,8 @@ export async function unpause (
           name: 'Author',
           value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
         }
-      ]
+      ],
+      color: config.colours().log.pause
     },
     ctx: submission
   })
@@ -207,7 +209,8 @@ export async function accept (
           name: 'Author',
           value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
         }
-      ]
+      ],
+      color: config.colours().log.accepted
     },
     ctx: submission
   })
@@ -290,7 +293,8 @@ ${draft.content}
           name: 'Author',
           value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
         }
-      ]
+      ],
+      color: config.colours().log.denied
     },
     ctx: submission
   })
@@ -352,7 +356,8 @@ export async function forceReject (
           name: 'Author',
           value: `<@${submission.authorId}> (${submission.authorId})`
         }
-      ]
+      ],
+      color: config.colours().log.denied
     },
     ctx: submission
   })

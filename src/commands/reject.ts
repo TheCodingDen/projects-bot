@@ -82,7 +82,7 @@ export default class RejectCommand extends SlashCommand {
     assert(!!logOutput, 'logOutput was not set')
 
     const templatedReason = template({
-      user: `<@${member.user.id}>`,
+      user: `<@${submission.authorId}>`,
       name: submission.name
     })
 

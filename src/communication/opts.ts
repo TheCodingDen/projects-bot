@@ -44,7 +44,11 @@ export function makeDjsMessageOpts<TOpts> (
 
   if (options.type === 'embed') {
     const embed = { ...options.embed }
-    embed.color = config.colours().log[options.level]
+
+    // Only set it if it isnt set already.
+    if (!embed.color) {
+      embed.color = config.colours().log[options.level]
+    }
 
     out = {
       embeds: [embed],
@@ -71,7 +75,11 @@ export function makeSlashMessageOpts<TOpts> (
 
   if (options.type === 'embed') {
     const embed = { ...options.embed }
-    embed.color = config.colours().log[options.level]
+
+    // Only set it if it isnt set already.
+    if (!embed.color) {
+      embed.color = config.colours().log[options.level]
+    }
 
     out = {
       embeds: [embed],
