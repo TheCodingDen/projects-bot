@@ -93,6 +93,17 @@ export async function handleButtonEvent (
     role: toVoteRole(member)
   }
 
+  if (vote.role !== 'STAFF' && (vote.type === 'PAUSE' || vote.type === 'UNPAUSE')) {
+    logger.info(`Preventing non staff member ${stringify.user(vote.voter.user)} from ${vote.type}ing`)
+    interactionLog.warning({
+      type: 'text',
+      content: 'Only staff members are permitted to pause and unpause submissions.',
+      ctx: event
+    })
+
+    return
+  }
+
   logger.debug(`Working with vote ${stringify.vote(vote)}`)
 
   // This won't interfere with unpausing because we dont store pause votes
