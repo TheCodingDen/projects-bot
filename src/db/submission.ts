@@ -10,6 +10,7 @@ import { Draft } from '../types/draft'
 import { SubmissionId } from '../types/misc'
 import {
   ApiSubmission,
+  CompletedSubmission,
   PendingSubmission,
   SubmissionState,
   ValidatedSubmission
@@ -108,7 +109,7 @@ export async function fetchSubmissionsByMemberId (
 
 export async function fetchSubmissionByMessageId (
   id: Snowflake
-): Promise<ValidatedSubmission | PendingSubmission | undefined> {
+): Promise<ValidatedSubmission | PendingSubmission | CompletedSubmission | undefined> {
   const data = await query((db) =>
     db.submission.findUnique({
       where: {
@@ -144,6 +145,28 @@ export async function fetchSubmissionByMessageId (
     logger.debug(`Got submission ${stringify.submission(pending)}`)
 
     return pending
+  }
+
+  if (data.state === 'ACCEPTED' || data.state === 'DENIED') {
+    // It's a completed submission
+
+    // This should succeed because this function is only called
+    // from button votes, whereby the author must exist
+    const author = await fetchAuthor(data.authorId)
+
+    const completed: CompletedSubmission = {
+      ...data,
+      state: data.state,
+      tech: data.techUsed,
+
+      links: {
+        source: data.sourceLinks,
+        other: data.otherLinks
+      },
+      author
+    }
+
+    return completed
   }
 
   return await resolvePrismaData(data)

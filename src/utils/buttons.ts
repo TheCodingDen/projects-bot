@@ -7,12 +7,12 @@ const emojis = config.emojis().button
  */
 export const VOTING_BUTTONS = [
   new ButtonBuilder()
-    .setStyle(ButtonStyle.Primary)
+    .setStyle(ButtonStyle.Secondary)
     .setLabel('Upvote')
     .setCustomId('upvote')
     .setEmoji(emojis.upvote),
   new ButtonBuilder()
-    .setStyle(ButtonStyle.Primary)
+    .setStyle(ButtonStyle.Secondary)
     .setLabel('Downvote')
     .setCustomId('downvote')
     .setEmoji(emojis.downvote),

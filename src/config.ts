@@ -89,8 +89,8 @@ const config = {
    */
   emojis: () => ({
     button: {
-      upvote: '👍',
-      downvote: '👎',
+      upvote: '⬆️',
+      downvote: '⬇️',
       pause: '⏸️',
       clearWarnings: '❎'
     },

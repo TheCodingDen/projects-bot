@@ -239,6 +239,8 @@ export async function reject (
   await addVote(vote, submission)
   submission.votes.push(vote)
 
+  await updateMessage(submission.submissionMessage, createEmbed(submission))
+
   const threadMembers = await Promise.all(
     // Re-fetch *all* the users because for some idiotic reason, "members.fetch"
     // does not actually fetch members..? "member.user" becomes nullable which would
@@ -274,6 +276,8 @@ ${draft.content}
       submission
     )
 
+  await updateSubmissionState(submission, 'DENIED')
+
   const filter = (m: Message): boolean => m.channelId === feedbackThread.id
 
   await feedbackThread.awaitMessages({ filter, max: 1 })
@@ -308,8 +312,6 @@ ${draft.content}
     },
     ctx: submission
   })
-
-  await updateSubmissionState(submission, 'DENIED')
 
   return {
     error: false,
