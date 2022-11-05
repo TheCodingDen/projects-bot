@@ -47,12 +47,11 @@ export async function sendMessageToFeedbackThread (
   }
 
   // If not, make one
-  const { publicShowcase } = config.channels()
+  const { reviewThreadChannel } = config.channels()
   const feedbackThread = await runCatching(
     async () =>
-      await publicShowcase.threads.create({
+      await reviewThreadChannel.threads.create({
         name: submission.name,
-        // This cannot be abstracted anywhere because we need to keep the union around
         type:
           process.env.NODE_ENV === 'production'
             ? ChannelType.PrivateThread

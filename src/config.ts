@@ -22,6 +22,10 @@ const config = {
       { name: 'Advertisement', value: 'ad' }
     ],
     /**
+     * The rejection reasons that are logged in the public logs rather than in a private review thread.
+     */
+    publiclyLogged: ['invalid-id'],
+    /**
      * The lookup table to go from enum keys to log friendly outputs.
      */
     logLookup: {
@@ -69,7 +73,9 @@ const config = {
     privateLogs: env.textChannel('PRIVATE_LOG_CHANNEL'),
     publicLogs: env.textChannel('PUBLIC_LOG_CHANNEL'),
     internalLogs: env.textChannel('INTERNAL_LOG_CHANNEL'),
-    publicShowcase: env.textChannel('PUBLIC_SHOWCASE_CHANNEL')
+    publicShowcase: env.textChannel('PUBLIC_SHOWCASE_CHANNEL'),
+
+    reviewThreadChannel: env.textChannel('REVIEW_THREAD_CHANNEL')
   }),
   /**
    * Config for the active roles in the bot.

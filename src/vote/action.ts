@@ -17,6 +17,7 @@ import {
 } from '../types/submission'
 import { Vote } from '../types/vote'
 import { createEmbed, updateMessage } from '../utils/embed'
+import { runCatching } from '../utils/request'
 import { sendMessageToFeedbackThread } from '../utils/thread'
 import { VoteModificationResult } from './result'
 
@@ -343,12 +344,21 @@ export async function forceReject (
     'attempted to force-reject an PAUSED state submission'
   )
 
-  await sendMessageToFeedbackThread(
-    {
+  if (config.rejection().publiclyLogged.includes(details.rawReason)) {
+    // We want to publicly log it
+
+    const { publicLogs } = config.channels()
+    await runCatching(async () => await publicLogs.send({
       content: details.templatedReason
-    },
-    submission
-  )
+    }), 'supress')
+  } else {
+    await sendMessageToFeedbackThread(
+      {
+        content: details.templatedReason
+      },
+      submission
+    )
+  }
 
   privateLog.info({
     type: 'embed',
