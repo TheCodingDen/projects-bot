@@ -57,7 +57,8 @@ const config = {
    * Config for the backend API
    */
   api: () => ({
-    port: env.number('PORT')
+    port: env.number('PORT'),
+    key: env.string('API_AUTH_KEY')
   }),
   /**
    * Config for the active guilds in the bot.
