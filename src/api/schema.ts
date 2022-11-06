@@ -9,7 +9,7 @@ export const apiSubmissionSchema = {
   ],
   properties: {
     name: { type: 'string' },
-    authorId: { type: 'string' },
+    authorId: { type: 'string', pattern: '^(\\d+)$' },
     description: { type: 'string' },
     tech: { type: 'string' },
 

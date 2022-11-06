@@ -201,9 +201,9 @@ async function fetchFeedbackThread (
   threadId: Snowflake
 ): Promise<ThreadChannel | undefined> {
   logger.trace(`Fetching feedback thread by ID ${threadId}`)
-  const { publicShowcase } = config.channels()
+  const { feedbackThreadChannel } = config.channels()
   const feedbackThread = await runCatching(
-    async () => await publicShowcase.threads.fetch(threadId),
+    async () => await feedbackThreadChannel.threads.fetch(threadId),
     'rethrow'
   )
 

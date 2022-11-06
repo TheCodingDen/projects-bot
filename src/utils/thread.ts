@@ -47,10 +47,10 @@ export async function sendMessageToFeedbackThread (
   }
 
   // If not, make one
-  const { reviewThreadChannel } = config.channels()
+  const { feedbackThreadChannel } = config.channels()
   const feedbackThread = await runCatching(
     async () =>
-      await reviewThreadChannel.threads.create({
+      await feedbackThreadChannel.threads.create({
         name: submission.name,
         type:
           process.env.NODE_ENV === 'production'

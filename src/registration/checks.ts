@@ -30,6 +30,22 @@ export async function runCriticalChecks (
   try {
     const member = await guild.members.fetch(submission.authorId)
 
+    // d.js has been observed to return undefined in some cases here, for unknown reasons.
+    // the types do not specify this, so it's not known why this happens.
+    // check it for sanity.
+    if (!member || !member.user) {
+      genericLog.error({
+        type: 'text',
+        content: `Could not locate author for this submission (${submission.authorId})`,
+        ctx: reviewThread
+      })
+
+      return {
+        error: true,
+        message: `Unknown user ${submission.authorId}`
+      }
+    }
+
     return {
       error: false,
       author: member

@@ -257,7 +257,7 @@ export async function reject (
   const reviewers = [...new Set([...threadMembers, ...voters])]
 
   const formattedReviewers = reviewers
-    .filter((v) => !v.bot && v.id !== submission.authorId)
+    .filter((v) => !v.bot)
     .map((v) => `<@${v.id}>`)
 
   const rejectionMessage = `

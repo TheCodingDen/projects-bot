@@ -75,7 +75,7 @@ const config = {
     internalLogs: env.textChannel('INTERNAL_LOG_CHANNEL'),
     publicShowcase: env.textChannel('PUBLIC_SHOWCASE_CHANNEL'),
 
-    reviewThreadChannel: env.textChannel('REVIEW_THREAD_CHANNEL')
+    feedbackThreadChannel: env.textChannel('FEEDBACK_THREAD_CHANNEL')
   }),
   /**
    * Config for the active roles in the bot.

@@ -72,10 +72,10 @@ export default class ThreadCommand extends SlashCommand {
     }
 
     // Otherwise, make a thread
-    const { publicShowcase } = config.channels()
+    const { feedbackThreadChannel } = config.channels()
     const feedbackThread = await runCatching(
       async () =>
-        await publicShowcase.threads.create({
+        await feedbackThreadChannel.threads.create({
           name: submission.name,
           // This cannot be abstracted anywhere because we need to keep the union around
           type:
