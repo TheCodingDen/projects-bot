@@ -108,7 +108,7 @@ export async function handleButtonEvent (
 
   // This won't interfere with unpausing because we dont store pause votes
   const existingVote = submission.votes.find(
-    (v) => v.role === vote.role && v.voter.id === vote.voter.id
+    (v) => v.role === vote.role
   )
 
   // You have a vote but you arent trying to pause or unpause

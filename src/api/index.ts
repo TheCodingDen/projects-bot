@@ -10,11 +10,6 @@ import {
   updateSubmissionState
 } from '../db/submission'
 import {
-  runCriticalChecks,
-  runNonCriticalChecks
-} from '../registration/checks'
-import { createPrivateReviewThread } from '../registration/thread'
-import {
   ApiSubmission,
   PendingSubmission,
   ValidatedSubmission
@@ -23,6 +18,7 @@ import { VOTING_BUTTONS } from '../utils/buttons'
 import { createEmbed, updateMessage } from '../utils/embed'
 import { runCatching } from '../utils/request'
 import { stringify } from '../utils/stringify'
+import { runNonCriticalChecks, runCriticalChecks } from './checks'
 import { apiSubmissionSchema } from './schema'
 
 const server: FastifyInstance = Fastify({})
@@ -48,9 +44,7 @@ server.post(
     const body = req.body
 
     logger.debug(
-      `Received incoming request (user-agent: ${
-        req.headers['user-agent']
-      }) (body: ${JSON.stringify(body)})`
+      `Received incoming request (body: ${JSON.stringify(body)})`
     )
 
     logger.trace('Validating body')
@@ -65,6 +59,13 @@ server.post(
 
     // This is the only valid value for this type, but the client wont provide it so we set it here
     submission.state = 'RAW'
+
+    logger.trace('Saving API data')
+    // Save API data to get submission ID and creation date
+    const { id: submissionId, submittedAt } = await saveApiData(submission)
+    logger.trace(
+      `Saved API data (id: ${submissionId}) (submittedAt: ${submittedAt.toLocaleString()})`
+    )
 
     // Send embed to private submissions channel
     logger.trace('Sending embed to private submissions channel')
@@ -81,25 +82,34 @@ server.post(
             )
           ]
         }),
-      'rethrow'
+      'supress'
     )
+
+    if (!submissionMessage) {
+      return {
+        error: true,
+        statusCode: 500,
+        message: 'Failed to send submission message.'
+      }
+    }
 
     logger.trace('Sent embed to private submissions channel')
 
     // Create attached review thread
     logger.trace('Creating private review thread')
-    const reviewThread = await createPrivateReviewThread(
-      submission,
-      submissionMessage
-    )
-    logger.trace('Created private review thread')
+    const reviewThread = await runCatching(async () => await submissionMessage.startThread({
+      name: submission.name
+    }), 'supress')
 
-    logger.trace('Saving API data')
-    // Save API data to get submission ID and creation date
-    const { id: submissionId, submittedAt } = await saveApiData(submission)
-    logger.trace(
-      `Saved API data (id: ${submissionId}) (submittedAt: ${submittedAt.toLocaleString()})`
-    )
+    if (!reviewThread) {
+      return {
+        error: true,
+        statusCode: 500,
+        message: 'Failed to create private review thread.'
+      }
+    }
+
+    logger.trace('Created private review thread')
 
     // Run critical checks
     logger.trace('Running critical checks')

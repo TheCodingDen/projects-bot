@@ -17,7 +17,7 @@ export type AnySubmission = ApiSubmission | PendingSubmission | ValidatedSubmiss
 /**
  * The base submission type, has no additional data.
  */
-export interface BaseSubmission {
+interface BaseSubmission {
   state: SubmissionState
 
   name: string
