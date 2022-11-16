@@ -32,7 +32,6 @@ server.post(
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
     // Check the request is authenticated
-
     if (req.headers.authorization !== config.api().key) {
       return {
         error: true,
@@ -40,6 +39,7 @@ server.post(
         message: 'Unauthorised'
       }
     }
+
     // Validate the JSON shape
     const body = req.body
 

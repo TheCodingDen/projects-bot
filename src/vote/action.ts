@@ -344,20 +344,27 @@ export async function forceReject (
     'attempted to force-reject an PAUSED state submission'
   )
 
-  if (config.rejection().publiclyLogged.includes(details.rawReason)) {
-    // We want to publicly log it
+  try {
+    if (config.rejection().publiclyLogged.includes(details.rawReason)) {
+      // We want to publicly log it
 
-    const { publicLogs } = config.channels()
-    await runCatching(async () => await publicLogs.send({
-      content: details.templatedReason
-    }), 'supress')
-  } else {
-    await sendMessageToFeedbackThread(
-      {
+      const { publicLogs } = config.channels()
+      await runCatching(async () => await publicLogs.send({
         content: details.templatedReason
-      },
-      submission
-    )
+      }), 'supress')
+    } else {
+      await sendMessageToFeedbackThread(
+        {
+          content: details.templatedReason
+        },
+        submission
+      )
+    }
+  } catch (err) {
+    return {
+      error: true,
+      message: `Failed to send rejection message: ${err}`
+    }
   }
 
   privateLog.info({
@@ -385,8 +392,11 @@ export async function forceReject (
   })
 
   if (isValidated(submission)) {
-    await submission.reviewThread.setArchived(true)
-    await submission.submissionMessage.delete()
+    // We can supress these, they arent critical for operation
+    await runCatching(async () => {
+      await submission.reviewThread.setArchived(true)
+      await submission.submissionMessage.delete()
+    }, 'supress')
 
     return {
       error: false,
@@ -400,8 +410,11 @@ export async function forceReject (
       submission
     )
 
-    await reviewThread.setArchived(true)
-    await submissionMessage.delete()
+    // We can supress these, they arent critical for operation
+    await runCatching(async () => {
+      await reviewThread.setArchived(true)
+      await submissionMessage.delete()
+    }, 'supress')
 
     return {
       error: false,

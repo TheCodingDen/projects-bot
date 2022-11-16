@@ -6,6 +6,7 @@ import {
   CommandOptionType
 } from 'slash-create'
 import { commandLog } from '../communication/interaction'
+import { internalLog } from '../communication/internal'
 import config from '../config'
 import { fetchSubmissionForContext } from '../utils/commands'
 import { getAssignedGuilds } from '../utils/discordUtils'
@@ -110,6 +111,15 @@ export default class RejectCommand extends SlashCommand {
           ephemeral: false
         }
       })
+
+      // Errors should already be reported, but doing it again does no harm
+      // and provides more context in the logs than "request failed"
+      internalLog.error({
+        type: 'text',
+        content: rejectionResult.message,
+        ctx: submission
+      })
+
       return
     }
 

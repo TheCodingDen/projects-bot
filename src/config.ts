@@ -118,7 +118,6 @@ const config = {
       PROCESSING: 0X90C8AC,
       RAW: 0X90C8AC
     },
-    // TODO: pick these colours
     log: {
       info: 0X90C8AC,
       warning: 0XE5EBB2,
