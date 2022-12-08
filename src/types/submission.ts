@@ -1,6 +1,6 @@
 import { GuildMember, Message, Snowflake, ThreadChannel } from 'discord.js'
 import { Draft } from './draft'
-import { SubmissionId } from './misc'
+import { Cuid } from './misc'
 import { Vote } from './vote'
 
 /**
@@ -45,7 +45,7 @@ export interface ApiSubmission extends BaseSubmission {
  */
 export interface PendingSubmission extends BaseSubmission {
   state: 'WARNING' | 'ERROR'
-  id: SubmissionId
+  id: Cuid
   submittedAt: Date
 }
 
@@ -55,7 +55,7 @@ export interface PendingSubmission extends BaseSubmission {
  */
 export interface ValidatedSubmission extends BaseSubmission {
   state: 'PROCESSING' | 'PAUSED'
-  id: SubmissionId
+  id: Cuid
   submittedAt: Date
 
   reviewThread: ThreadChannel
@@ -73,7 +73,7 @@ export interface ValidatedSubmission extends BaseSubmission {
  */
 export interface CompletedSubmission extends BaseSubmission {
   state: 'ACCEPTED' | 'DENIED'
-  id: SubmissionId
+  id: Cuid
   submittedAt: Date
 
   // Author may no longer exist when we fetch in this state

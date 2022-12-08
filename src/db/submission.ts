@@ -7,7 +7,7 @@ import assert from 'assert'
 import { GuildMember, Message, Snowflake, ThreadChannel } from 'discord.js'
 import config from '../config'
 import { Draft } from '../types/draft'
-import { SubmissionId } from '../types/misc'
+import { Cuid } from '../types/misc'
 import {
   ApiSubmission,
   CompletedSubmission,
@@ -412,7 +412,7 @@ export async function updateSubmissionState (
 }
 
 interface DbGeneratedData {
-  id: SubmissionId
+  id: Cuid
   submittedAt: Date
 }
 
