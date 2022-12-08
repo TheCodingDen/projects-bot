@@ -1,5 +1,5 @@
 import { Snowflake } from 'discord.js'
-import { SubmissionId as Cuid } from '../types/misc'
+import { Cuid } from '../types/misc'
 import { query } from './client'
 
 interface DraftGeneratedData {

@@ -11,7 +11,7 @@ import {
 import { commandLog } from '../communication/interaction'
 import { createDraft, deleteDraft } from '../db/draft'
 import { Draft } from '../types/draft'
-import { ValidatedSubmission } from '../types/submission'
+import { isValidated, ValidatedSubmission } from '../types/submission'
 import { fetchSubmissionForContext } from '../utils/commands'
 import { DEFAULT_MESSAGE_OPTS_SLASH } from '../utils/communication'
 import { getAssignedGuilds } from '../utils/discordUtils'
@@ -61,7 +61,7 @@ export default class DraftCommand extends SlashCommand {
     // This would be a Discord API failure
     assert(!!subcommand, 'subcommand was not set')
 
-    if (submission.state !== 'PROCESSING') {
+    if (!isValidated(submission)) {
       commandLog.warning({
         type: 'text',
         content:
@@ -230,7 +230,7 @@ timestamp: ${draft.timestamp.toLocaleString()}
                 type: ComponentType.TEXT_INPUT,
                 label: 'Draft',
                 style: TextInputStyle.PARAGRAPH,
-                custom_id: 'new_value',
+                custom_id: 'newValue',
                 value: oldValue
               }
             ]
@@ -238,7 +238,7 @@ timestamp: ${draft.timestamp.toLocaleString()}
         ]
       },
       (mctx) => {
-        const newValue = mctx.values.new_value
+        const { newValue } = mctx.values
         logger.debug(
           `Adding draft ${newValue} to submission ${stringify.submission(
             submission
@@ -248,18 +248,15 @@ timestamp: ${draft.timestamp.toLocaleString()}
         void createDraft(newValue, mctx.user.id, submission.id)
 
         void runCatching(
-          async () =>
+          async () => {
             await mctx.send({
               content: 'Added new draft successfully.'
-            }),
-          'rethrow'
-        )
+            })
 
-        void runCatching(
-          async () =>
             await mctx.sendFollowUp({
               content: newValue
-            }),
+            })
+          },
           'rethrow'
         )
       }
@@ -288,7 +285,7 @@ ${current.content}
 
 id: ${current.id}
 author: ${current.author.user.tag}
-timestamp: ${current.timestamp.toLocaleString()}
+timestamp: <t:${current.timestamp.getUTCMilliseconds()}:f> (<t:${current.timestamp.getUTCMilliseconds()}:R>)
 `,
       ctx,
       extraOpts: {

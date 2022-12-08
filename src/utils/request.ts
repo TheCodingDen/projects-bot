@@ -2,7 +2,7 @@ import { DiscordAPIError } from 'discord.js'
 import { internalLog } from '../communication/internal'
 
 // FIXME: better name than "supress"
-type CatchBehaviour = 'rethrow' | 'supress'
+type CatchBehaviour = 'rethrow' | 'suppress'
 
 /**
  * Run the callback, catching any errors that are thrown from it.
@@ -10,7 +10,7 @@ type CatchBehaviour = 'rethrow' | 'supress'
  * If `behaviour` is "rethrow", the caught error is rethrown.
  */
 export async function runCatching<T> (fn: () => Promise<T | undefined> | T | undefined, behaviour: 'rethrow'): Promise<T>
-export async function runCatching<T> (fn: () => Promise<T | undefined> | T | undefined, behaviour: 'supress'): Promise<T | undefined>
+export async function runCatching<T> (fn: () => Promise<T | undefined> | T | undefined, behaviour: 'suppress'): Promise<T | undefined>
 export async function runCatching<T> (fn: () => Promise<T | undefined> | T | undefined, behaviour: CatchBehaviour): Promise<T | undefined> {
   let msg = 'unknown'
   let cause
@@ -50,7 +50,7 @@ export async function runCatching<T> (fn: () => Promise<T | undefined> | T | und
     ctx: undefined
   })
 
-  if (behaviour === 'supress') {
+  if (behaviour === 'suppress') {
     return undefined
   }
 

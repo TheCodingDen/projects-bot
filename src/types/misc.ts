@@ -1,2 +1,2 @@
-// The type we use for submission IDs, aliased for better dx
-export type SubmissionId = string
+// The type we use for Cuid values, aliased for better dx
+export type Cuid = string

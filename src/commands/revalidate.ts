@@ -5,16 +5,17 @@ import {
   updateSubmissionState,
   validatePendingSubmission
 } from '../db/submission'
+import { isValidated } from '../types/submission'
 import { fetchSubmissionForContext } from '../utils/commands'
 import { getAssignedGuilds } from '../utils/discordUtils'
 import { createEmbed, updateMessage } from '../utils/embed'
 import { stringify } from '../utils/stringify'
 
-export default class ClearCommand extends SlashCommand {
+export default class RevalidateCommand extends SlashCommand {
   constructor (creator: SlashCreator) {
     super(creator, {
-      name: 'clear',
-      description: 'Clear warnings from a submission',
+      name: 'revalidate',
+      description: 'Revalidate a submission, removing warnings if it is successful.',
       guildIDs: getAssignedGuilds({ includeMain: true })
     })
   }
@@ -33,7 +34,7 @@ export default class ClearCommand extends SlashCommand {
     )
 
     // Not in a pending state (validated instead)
-    if (submission.state !== 'WARNING' && submission.state !== 'ERROR') {
+    if (isValidated(submission)) {
       logger.debug('Clear halting, submission in validated state')
       return void commandLog.warning({
         type: 'text',

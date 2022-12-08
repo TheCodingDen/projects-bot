@@ -80,5 +80,5 @@ export async function updateThreadName (
     return
   }
 
-  await runCatching(async () => await thread.setName(newName), 'supress')
+  await runCatching(async () => await thread.setName(newName), 'suppress')
 }

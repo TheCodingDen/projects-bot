@@ -26,7 +26,7 @@ export async function handleMemberLeaveEvent (
     const { privateSubmissions } = config.channels()
     const reviewThread = await runCatching(
       async () => await privateSubmissions.threads.fetch(reviewThreadId),
-      'supress'
+      'suppress'
     )
 
     if (!reviewThread) {
@@ -35,7 +35,7 @@ export async function handleMemberLeaveEvent (
 
     const submissionMessage = await runCatching(
       async () => await privateSubmissions.messages.fetch(submissionMessageId),
-      'supress'
+      'suppress'
     )
 
     await reviewThread?.setArchived(true)

@@ -92,7 +92,7 @@ export default class ThreadCommand extends SlashCommand {
         await feedbackThread
           .send({ content: ctx.user.mention })
           .then(async (msg) => await msg.delete()),
-      'supress'
+      'suppress'
     )
 
     commandLog.info({

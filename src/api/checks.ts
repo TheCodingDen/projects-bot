@@ -6,25 +6,26 @@ import { query } from '../db/client'
 import { ApiSubmission, ValidatedSubmission } from '../types/submission'
 import { runCatching } from '../utils/request'
 
-interface CriticalCheckOk {
+interface RequiredValuesOk {
   author: GuildMember
   error: false
 }
 
-interface CriticalCheckErr {
+interface RequiredValuesErr {
   message: string
   error: true
 }
 
-export type CriticalCheckResult = CriticalCheckOk | CriticalCheckErr
+export type RequiredValuesResult = RequiredValuesOk | RequiredValuesErr
 
-// The check functions here will handle the reporting of errors, but not the side effects of such.
-// This should be handled by the caller.
+// The check functions here will handle the reporting of errors to the user
+// but will not handle the cleanup / any further operations after that.
+// Those should be handled by the caller.
 
-export async function runCriticalChecks (
+export async function resolveRequiredValues (
   submission: ApiSubmission,
   reviewThread: ThreadChannel
-): Promise<CriticalCheckResult> {
+): Promise<RequiredValuesResult> {
   const guild = config.guilds().current
 
   try {
@@ -33,7 +34,7 @@ export async function runCriticalChecks (
     // d.js has been observed to return undefined in some cases here, for unknown reasons.
     // the types do not specify this, so it's not known why this happens.
     // check it for sanity.
-    if (!member || !member.user) {
+    if (!member?.user) {
       genericLog.error({
         type: 'text',
         content: `Could not locate author for this submission (${submission.authorId})`,
@@ -182,7 +183,7 @@ async function runGitHubChecks (
         { url: submission.links.source },
         { authorization: `Bearer ${config.github().token}` }
       ),
-    'supress'
+    'suppress'
   )
 
   if (!res) {
@@ -198,7 +199,7 @@ async function runGitHubChecks (
     return {
       outcome: 'error',
       message:
-        'GitHub reported no data on this submission, repository likely doesnt exist or is private.'
+        "GitHub reported no data on this submission, repository likely doesn't exist or is private."
     }
   }
 

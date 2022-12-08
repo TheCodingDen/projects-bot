@@ -1,6 +1,6 @@
 import assert from 'assert'
-import { ActionRowBuilder, ButtonBuilder } from 'discord.js'
-import Fastify, { FastifyInstance } from 'fastify'
+import { ActionRowBuilder, ButtonBuilder, Message, ThreadChannel } from 'discord.js'
+import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import config from '../config'
 import {
   saveApiData,
@@ -18,7 +18,7 @@ import { VOTING_BUTTONS } from '../utils/buttons'
 import { createEmbed, updateMessage } from '../utils/embed'
 import { runCatching } from '../utils/request'
 import { stringify } from '../utils/stringify'
-import { runNonCriticalChecks, runCriticalChecks } from './checks'
+import { runNonCriticalChecks, resolveRequiredValues } from './checks'
 import { apiSubmissionSchema } from './schema'
 
 const server: FastifyInstance = Fastify({})
@@ -27,35 +27,145 @@ server.get('/health', async () => {
   return { healthy: true }
 })
 
+interface ApiError { error: true, statusCode: number, message: string, [k: string]: unknown }
+type ApiAction<T> = { error: false, data: T } | ApiError
+
+function validateRequest (req: FastifyRequest): ApiAction<ApiSubmission> {
+  // Check the request is authenticated
+  if (req.headers.authorization !== config.api().key) {
+    return {
+      error: true,
+      statusCode: 403,
+      message: 'Unauthorised'
+    }
+  }
+
+  // Validate the JSON shape
+  const body = req.body
+
+  logger.trace(
+      `Received incoming request (body: ${JSON.stringify(body)})`
+  )
+
+  logger.trace('Validating body')
+
+  // Should be true if Fastify properly validates the incoming data
+  assert(typeof body === 'object' && !!body, 'body was not an object')
+
+  logger.trace('Body was valid')
+  return {
+    error: false,
+    // Fastify validated the shape for us
+    data: body as ApiSubmission
+  }
+}
+
+async function sendMessageToPrivateSubmission (submission: ApiSubmission): Promise<ApiAction<Message<boolean>>> {
+  // Send embed to private submissions channel
+  logger.trace('Sending embed to private submissions channel')
+  const embed = createEmbed(submission)
+  const { privateSubmissions } = config.channels()
+
+  const submissionMessage = await runCatching(
+    async () =>
+      await privateSubmissions.send({
+        embeds: [embed],
+        components: [
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            ...VOTING_BUTTONS
+          )
+        ]
+      }),
+    'suppress'
+  )
+
+  if (!submissionMessage) {
+    return {
+      error: true,
+      statusCode: 500,
+      message: 'Failed to send submission message.'
+    }
+  }
+
+  logger.trace('Sent embed to private submissions channel')
+
+  return {
+    error: false,
+    data: submissionMessage
+  }
+}
+
+async function createPrivateReviewThread (submission: ApiSubmission, submissionMessage: Message): Promise<ApiAction<ThreadChannel>> {
+  logger.trace('Creating private review thread')
+  const reviewThread = await runCatching(async () => await submissionMessage.startThread({
+    name: submission.name
+  }), 'suppress')
+
+  if (!reviewThread) {
+    return {
+      error: true,
+      statusCode: 500,
+      message: 'Failed to create private review thread.'
+    }
+  }
+
+  logger.trace('Created private review thread')
+
+  return {
+    error: false,
+    data: reviewThread
+  }
+}
+
+async function handleResolutionFailure (
+  submission: PendingSubmission,
+  submissionMessage: Message,
+  res: FastifyReply,
+  reviewThread: ThreadChannel,
+  failureReason: string
+): Promise<ApiError> {
+  logger.error(
+        `Failed to fetch required values for submission ${stringify.submission(
+          submission
+        )} with reason ${failureReason}`
+  )
+
+  logger.trace('Setting state and message')
+
+  // Move to error state
+  await updateSubmissionState(submission, 'ERROR')
+  await updateMessage(submissionMessage, createEmbed(submission))
+
+  logger.trace('Set state and message')
+
+  // Set the remaning data we have, still not enough for a fully validated submission
+  // but we still managed to get the thread and message
+
+  logger.trace('Setting remaining data (review thread id and submission message id)')
+  await updateReviewThreadId(submission, reviewThread.id)
+  await updateSubmissionMessageId(submission, submissionMessage.id)
+  logger.trace('Set remaining data (review thread id and submission message id)')
+
+  // Abort here, we will need user intervention to continue
+  res.statusCode = 400
+
+  return {
+    error: true,
+    statusCode: 400,
+    message: 'Failed to resolve required values.'
+  }
+}
+
 server.post(
   '/submissions',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    // Check the request is authenticated
-    if (req.headers.authorization !== config.api().key) {
-      return {
-        error: true,
-        statusCode: 403,
-        message: 'Unauthorised'
-      }
+    const requestValidationResult = validateRequest(req)
+    if (requestValidationResult.error) {
+      return requestValidationResult
     }
 
-    // Validate the JSON shape
-    const body = req.body
-
-    logger.debug(
-      `Received incoming request (body: ${JSON.stringify(body)})`
-    )
-
-    logger.trace('Validating body')
-
-    // Should be true if Fastify properly validates the incoming data
-    assert(typeof body === 'object' && !!body, 'body was not an object')
-
-    logger.trace('Body was valid')
-
-    // Fastify validated the shape for us
-    const submission = body as ApiSubmission
+    const submission = requestValidationResult.data
 
     // This is the only valid value for this type, but the client wont provide it so we set it here
     submission.state = 'RAW'
@@ -67,62 +177,28 @@ server.post(
       `Saved API data (id: ${submissionId}) (submittedAt: ${submittedAt.toLocaleString()})`
     )
 
-    // Send embed to private submissions channel
-    logger.trace('Sending embed to private submissions channel')
-    const embed = createEmbed(submission)
-    const { privateSubmissions } = config.channels()
-
-    const submissionMessage = await runCatching(
-      async () =>
-        await privateSubmissions.send({
-          embeds: [embed],
-          components: [
-            new ActionRowBuilder<ButtonBuilder>().addComponents(
-              ...VOTING_BUTTONS
-            )
-          ]
-        }),
-      'supress'
-    )
-
-    if (!submissionMessage) {
-      return {
-        error: true,
-        statusCode: 500,
-        message: 'Failed to send submission message.'
-      }
+    const submissionMessageResult = await sendMessageToPrivateSubmission(submission)
+    if (submissionMessageResult.error) {
+      return submissionMessageResult
     }
 
-    logger.trace('Sent embed to private submissions channel')
+    const submissionMessage = submissionMessageResult.data
 
     // Create attached review thread
-    logger.trace('Creating private review thread')
-    const reviewThread = await runCatching(async () => await submissionMessage.startThread({
-      name: submission.name
-    }), 'supress')
 
-    if (!reviewThread) {
-      return {
-        error: true,
-        statusCode: 500,
-        message: 'Failed to create private review thread.'
-      }
+    const reviewThreadResult = await createPrivateReviewThread(submission, submissionMessage)
+    if (reviewThreadResult.error) {
+      return reviewThreadResult
     }
 
-    logger.trace('Created private review thread')
+    const reviewThread = reviewThreadResult.data
 
-    // Run critical checks
-    logger.trace('Running critical checks')
-    const criticalResult = await runCriticalChecks(submission, reviewThread)
-    logger.trace(`Critical checks pass: ${!criticalResult.error}`)
+    // Resolving required values
+    logger.trace('Resolving required values')
+    const valuesResult = await resolveRequiredValues(submission, reviewThread)
+    logger.trace(`Required values resolved: ${!valuesResult.error}`)
 
-    if (criticalResult.error) {
-      logger.error(
-        `Critical check failed for submission ${stringify.submission(
-          submission
-        )} with reason ${criticalResult.message}`
-      )
-
+    if (valuesResult.error) {
       // Prove we have enough data for a pending submission
       const pendingSubmission: PendingSubmission = {
         ...submission,
@@ -132,32 +208,16 @@ server.post(
         state: 'ERROR'
       }
 
-      logger.trace('Setting state and message')
-
-      // Move to error state
-      await updateSubmissionState(pendingSubmission, 'ERROR')
-      await updateMessage(submissionMessage, createEmbed(pendingSubmission))
-
-      logger.trace('Set state and message')
-
-      // Set the remaning data we have, still not enough for a fully validated submission
-      // but we still managed to get the thread and message
-
-      logger.trace('Setting remaining data (review thread id and submission message id)')
-      await updateReviewThreadId(pendingSubmission, reviewThread.id)
-      await updateSubmissionMessageId(pendingSubmission, submissionMessage.id)
-      logger.trace('Set remaining data (review thread id and submission message id)')
-
-      // Abort here, we will need user intervention to continue
-      res.statusCode = 400
-      return {
-        error: true,
-        statusCode: 400,
-        message: 'Critical check failed.'
-      }
+      return await handleResolutionFailure(
+        pendingSubmission,
+        submissionMessage,
+        res,
+        reviewThread,
+        valuesResult.message
+      )
     }
 
-    const { author } = criticalResult
+    const { author } = valuesResult
 
     // Create validated submission
     const validatedSubmission: ValidatedSubmission = {

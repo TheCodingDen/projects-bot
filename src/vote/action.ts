@@ -351,7 +351,7 @@ export async function forceReject (
       const { publicLogs } = config.channels()
       await runCatching(async () => await publicLogs.send({
         content: details.templatedReason
-      }), 'supress')
+      }), 'suppress')
     } else {
       await sendMessageToFeedbackThread(
         {
@@ -396,7 +396,7 @@ export async function forceReject (
     await runCatching(async () => {
       await submission.reviewThread.setArchived(true)
       await submission.submissionMessage.delete()
-    }, 'supress')
+    }, 'suppress')
 
     return {
       error: false,
@@ -414,7 +414,7 @@ export async function forceReject (
     await runCatching(async () => {
       await reviewThread.setArchived(true)
       await submissionMessage.delete()
-    }, 'supress')
+    }, 'suppress')
 
     return {
       error: false,
