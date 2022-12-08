@@ -65,7 +65,7 @@ export default class DraftCommand extends SlashCommand {
       commandLog.warning({
         type: 'text',
         content:
-          'Cannot use drafts on a pending or paused submission, please resolve issues and retry.',
+          'Cannot use drafts on a submission with warnings, or a paused submission, please resolve issues and retry.',
         ctx
       })
       return
