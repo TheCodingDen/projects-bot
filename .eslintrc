@@ -1,0 +1,24 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "env": {
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "project": "./tsconfig.json",
+    "createDefaultProgram": true, // Required for linting to work even on the test folder
+    "ecmaFeatures": {
+      "globalReturn": true
+    },
+    "sourceType": "module"
+  },
+  "extends": "standard-with-typescript",
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "rules": {
+    "no-void": "off",
+    "@typescript-eslint/restrict-template-expressions": "off",
+    "@typescript-eslint/strict-boolean-expressions": "off"
+  }
+}

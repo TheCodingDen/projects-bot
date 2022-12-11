@@ -1,0 +1,58 @@
+{
+  "name": "bot-boilerplate",
+  "version": "1.0.0",
+  "description": "Boilerplate for TCD Discord bots.",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "18.x"
+  },
+  "scripts": {
+    "start": "nodemon lib/index.js",
+    "dev": "concurrently --kill-others --prefix [{name}] --names tsc,cleaner,node \"npm:build:watch\" \"npm:cleaner\" \"npm:start\"",
+    "build": "tsc",
+    "build:watch": "tsc --watch --preserveWatchOutput",
+    "cleaner": "ts-cleaner --dist lib --watch",
+    "lint": "eslint . --ext .ts",
+    "sync": "slash-up sync",
+    "sync:dev": "slash-up sync -e development",
+    "prepare": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheCodingDen/bot-boilerplate.git"
+  },
+  "author": "The Coding Den",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TheCodingDen/bot-boilerplate/issues"
+  },
+  "homepage": "https://github.com/TheCodingDen/bot-boilerplate#readme",
+  "dependencies": {
+    "discord.js": "^14.6.0",
+    "dotenv-safe": "^8.2.0",
+    "pino": "^8.6.1",
+    "pino-pretty": "^9.1.1",
+    "slash-create": "^5.9.0",
+    "slash-up": "^1.2.1",
+    "typescript": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/dotenv-safe": "^8.1.2",
+    "@types/node": "^18.11.0",
+    "@typescript-eslint/eslint-plugin": "^5.40.0",
+    "@typescript-eslint/parser": "^5.40.0",
+    "concurrently": "^7.4.0",
+    "eslint": "^8.25.0",
+    "eslint-config-standard-with-typescript": "^23.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-n": "^15.3.0",
+    "eslint-plugin-promise": "^6.1.0",
+    "husky": "^8.0.1",
+    "lint-staged": "^13.0.3",
+    "nodemon": "^2.0.20",
+    "ts-cleaner": "^1.0.5"
+  },
+  "lint-staged": {
+    "*.(ts|js)": "npm run lint -- --fix"
+  }
+}
