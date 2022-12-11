@@ -30,7 +30,7 @@
   "dependencies": {
     "discord.js": "^14.6.0",
     "dotenv-safe": "^8.2.0",
-    "pino": "^8.6.1",
+    "pino": "^8.7.0",
     "pino-pretty": "^9.1.1",
     "slash-create": "^5.9.0",
     "slash-up": "^1.2.1",
