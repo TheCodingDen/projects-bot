@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/TheCodingDen/bot-boilerplate#readme",
   "dependencies": {
-    "discord.js": "^14.6.0",
+    "discord.js": "^14.7.1",
     "dotenv-safe": "^8.2.0",
     "pino": "^8.6.1",
     "pino-pretty": "^9.1.1",
