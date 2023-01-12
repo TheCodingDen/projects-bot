@@ -120,14 +120,14 @@ function onSubmit (e: GoogleAppsScript.Events.FormsOnFormSubmit): void {
   }
   const responses = e.response.getItemResponses()
 
-  const author = responses[0].getResponse()
+  const authorId = responses[0].getResponse()
   const name = responses[1].getResponse()
   const description = responses[2].getResponse()
   const source = responses[3].getResponse()
   const tech = responses[4].getResponse()
   const other = responses[3].getResponse()
   const payload = {
-    name, author, description, tech, links: { source, other }
+    name, authorId, description, tech, links: { source, other }
   }
   UrlFetchApp.fetch(endpoint, {
     method: 'post',
