@@ -279,7 +279,7 @@ ${draft.content}
 
   await updateSubmissionState(submission, 'DENIED')
 
-  const filter = (m: Message): boolean => m.channelId === feedbackThread.id
+  const filter = (m: Message): boolean => m.channelId === feedbackThread.id && m.content === rejectionMessage
 
   await feedbackThread.awaitMessages({ filter, max: 1 })
 
