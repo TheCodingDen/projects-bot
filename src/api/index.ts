@@ -156,127 +156,139 @@ async function handleResolutionFailure (
   }
 }
 
+async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<unknown> {
+  const requestValidationResult = validateRequest(req)
+  if (requestValidationResult.error) {
+    return requestValidationResult
+  }
+
+  const submission = requestValidationResult.data
+
+  // This is the only valid value for this type, but the client wont provide it so we set it here
+  submission.state = 'RAW'
+
+  logger.trace('Saving API data')
+  // Save API data to get submission ID and creation date
+  const { id: submissionId, submittedAt } = await saveApiData(submission)
+  logger.trace(
+      `Saved API data (id: ${submissionId}) (submittedAt: ${submittedAt.toLocaleString()})`
+  )
+
+  const submissionMessageResult = await sendMessageToPrivateSubmission(submission)
+  if (submissionMessageResult.error) {
+    return submissionMessageResult
+  }
+
+  const submissionMessage = submissionMessageResult.data
+
+  // Create attached review thread
+
+  const reviewThreadResult = await createPrivateReviewThread(submission, submissionMessage)
+  if (reviewThreadResult.error) {
+    return reviewThreadResult
+  }
+
+  const reviewThread = reviewThreadResult.data
+
+  // Resolving required values
+  logger.trace('Resolving required values')
+  const valuesResult = await resolveRequiredValues(submission, reviewThread)
+  logger.trace(`Required values resolved: ${!valuesResult.error}`)
+
+  if (valuesResult.error) {
+    // Prove we have enough data for a pending submission
+    const pendingSubmission: PendingSubmission = {
+      ...submission,
+
+      id: submissionId,
+      submittedAt,
+      state: 'ERROR'
+    }
+
+    return await handleResolutionFailure(
+      pendingSubmission,
+      submissionMessage,
+      res,
+      reviewThread,
+      valuesResult.message
+    )
+  }
+
+  const { author } = valuesResult
+
+  // Create validated submission
+  const validatedSubmission: ValidatedSubmission = {
+    ...submission,
+    id: submissionId,
+    submittedAt,
+
+    state: 'PROCESSING',
+    submissionMessage,
+    reviewThread,
+    feedbackThread: undefined,
+    author,
+
+    votes: [],
+    drafts: []
+  }
+
+  logger.debug(
+      `Working with submission ${stringify.submission(validatedSubmission)}`
+  )
+
+  // Set the remaning data needed to make up the validated submission
+  logger.trace('Setting author id, review thread id, submission message id')
+  await updateAuthorId(validatedSubmission, author.id)
+  await updateReviewThreadId(validatedSubmission, reviewThread.id)
+  await updateSubmissionMessageId(validatedSubmission, submissionMessage.id)
+  logger.trace('Set author id, review thread id, submission message id')
+
+  logger.trace('Running non critical checks')
+  // Run non critical checks
+  const didChecksPass = await runNonCriticalChecks(validatedSubmission)
+  logger.trace(`Non critical checks pass: ${didChecksPass}`)
+
+  if (!didChecksPass) {
+    logger.info(
+        `Non critical checks failed for submission ${stringify.submission(
+          validatedSubmission
+        )}`
+    )
+    // Move to warning state
+    logger.trace('Updating submission state to WARNING')
+    await updateSubmissionState(validatedSubmission, 'WARNING')
+    logger.trace('Updated submission state to WARNING')
+
+    const pendingSubmission: PendingSubmission = {
+      ...validatedSubmission,
+      state: 'WARNING'
+    }
+
+    await updateMessage(submissionMessage, createEmbed(pendingSubmission))
+  } else {
+    // Update the embed with our new data
+    logger.trace('Updating submission state to PROCESSING')
+    await updateSubmissionState(validatedSubmission, 'PROCESSING')
+    await updateMessage(submissionMessage, createEmbed(validatedSubmission))
+    logger.trace('Updated submission state to PROCESSING')
+  }
+
+  res.statusCode = 204
+}
+
 server.post(
   '/submissions',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    const requestValidationResult = validateRequest(req)
-    if (requestValidationResult.error) {
-      return requestValidationResult
-    }
+    return await handleRequest(req, res)
+  }
+)
 
-    const submission = requestValidationResult.data
-
-    // This is the only valid value for this type, but the client wont provide it so we set it here
-    submission.state = 'RAW'
-
-    logger.trace('Saving API data')
-    // Save API data to get submission ID and creation date
-    const { id: submissionId, submittedAt } = await saveApiData(submission)
-    logger.trace(
-      `Saved API data (id: ${submissionId}) (submittedAt: ${submittedAt.toLocaleString()})`
-    )
-
-    const submissionMessageResult = await sendMessageToPrivateSubmission(submission)
-    if (submissionMessageResult.error) {
-      return submissionMessageResult
-    }
-
-    const submissionMessage = submissionMessageResult.data
-
-    // Create attached review thread
-
-    const reviewThreadResult = await createPrivateReviewThread(submission, submissionMessage)
-    if (reviewThreadResult.error) {
-      return reviewThreadResult
-    }
-
-    const reviewThread = reviewThreadResult.data
-
-    // Resolving required values
-    logger.trace('Resolving required values')
-    const valuesResult = await resolveRequiredValues(submission, reviewThread)
-    logger.trace(`Required values resolved: ${!valuesResult.error}`)
-
-    if (valuesResult.error) {
-      // Prove we have enough data for a pending submission
-      const pendingSubmission: PendingSubmission = {
-        ...submission,
-
-        id: submissionId,
-        submittedAt,
-        state: 'ERROR'
-      }
-
-      return await handleResolutionFailure(
-        pendingSubmission,
-        submissionMessage,
-        res,
-        reviewThread,
-        valuesResult.message
-      )
-    }
-
-    const { author } = valuesResult
-
-    // Create validated submission
-    const validatedSubmission: ValidatedSubmission = {
-      ...submission,
-      id: submissionId,
-      submittedAt,
-
-      state: 'PROCESSING',
-      submissionMessage,
-      reviewThread,
-      feedbackThread: undefined,
-      author,
-
-      votes: [],
-      drafts: []
-    }
-
-    logger.debug(
-      `Working with submission ${stringify.submission(validatedSubmission)}`
-    )
-
-    // Set the remaning data needed to make up the validated submission
-    logger.trace('Setting author id, review thread id, submission message id')
-    await updateAuthorId(validatedSubmission, author.id)
-    await updateReviewThreadId(validatedSubmission, reviewThread.id)
-    await updateSubmissionMessageId(validatedSubmission, submissionMessage.id)
-    logger.trace('Set author id, review thread id, submission message id')
-
-    logger.trace('Running non critical checks')
-    // Run non critical checks
-    const didChecksPass = await runNonCriticalChecks(validatedSubmission)
-    logger.trace(`Non critical checks pass: ${didChecksPass}`)
-
-    if (!didChecksPass) {
-      logger.info(
-        `Non critical checks failed for submission ${stringify.submission(
-          validatedSubmission
-        )}`
-      )
-      // Move to warning state
-      logger.trace('Updating submission state to WARNING')
-      await updateSubmissionState(validatedSubmission, 'WARNING')
-      logger.trace('Updated submission state to WARNING')
-
-      const pendingSubmission: PendingSubmission = {
-        ...validatedSubmission,
-        state: 'WARNING'
-      }
-
-      await updateMessage(submissionMessage, createEmbed(pendingSubmission))
-    } else {
-      // Update the embed with our new data
-      logger.trace('Updating submission state to PROCESSING')
-      await updateSubmissionState(validatedSubmission, 'PROCESSING')
-      await updateMessage(submissionMessage, createEmbed(validatedSubmission))
-      logger.trace('Updated submission state to PROCESSING')
-    }
-
-    res.statusCode = 204
+server.post(
+  '/',
+  { schema: { body: apiSubmissionSchema } },
+  async (req, res) => {
+    return await handleRequest(req, res)
   }
 )
 
