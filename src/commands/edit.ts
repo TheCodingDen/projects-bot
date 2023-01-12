@@ -1,153 +1,224 @@
-import { CommandInteraction, MessageActionRow, Modal, ModalSubmitInteraction, TextInputComponent } from 'discord.js'
-import Joi from 'joi'
-import { Err, Ok, Result } from 'ts-results'
-import { Command } from '../managers/commands'
-import { Submission } from '../models/submission'
-import { assert } from '../utils/assert'
-import { getCustomIdAdapters } from '../utils/custom-id'
-import { embeds } from '../utils/embeds'
-import { getRelevantSubmission, submissionNameAutocompleteProvider, submissionNameStringOption } from './utils'
+import assert from 'assert'
+import {
+  SlashCommand,
+  SlashCreator,
+  CommandContext,
+  CommandOptionType,
+  ComponentType,
+  TextInputStyle,
+  ModalInteractionContext
+} from 'slash-create'
+import { commandLog } from '../communication/interaction'
+import {
+  updateAuthorId,
+  updateDescription,
+  updateName,
+  updateOtherLink,
+  updateSourceLink,
+  updateTechnologies,
+  validatePendingSubmission
+} from '../db/submission'
+import {
+  isValidated,
+  PendingSubmission,
+  ValidatedSubmission
+} from '../types/submission'
+import { fetchSubmissionForContext } from '../utils/commands'
+import { DEFAULT_MESSAGE_OPTS_SLASH } from '../utils/communication'
+import { getAssignedGuilds } from '../utils/discordUtils'
+import { createEmbed, updateMessage } from '../utils/embed'
+import { runCatching } from '../utils/request'
+import { stringify } from '../utils/stringify'
+import { updateThreadName } from '../utils/thread'
 
-type EditType = 'name' | 'description' | 'source' | 'other' | 'technologies'
-
-const { from: fromCustomId, to: toCustomId } = getCustomIdAdapters<{type: EditType}>({
-  type: Joi.string().valid('name', 'description', 'source', 'other', 'technologies').required()
-})
-
-const edit: Command = {
-  name: 'edit',
-  description: 'Edits the title, description, or links of a submission.',
-  permissionLevel: 'veterans',
-  shouldPublishGlobally: true,
-  configureBuilder: builder => {
-    builder.addSubcommand(cmd =>
-      cmd.setName('name')
-        .setDescription('Edits the name of the submission')
-        .addStringOption(submissionNameStringOption)
-    )
-
-    builder.addSubcommand(cmd =>
-      cmd.setName('description')
-        .setDescription('Edits the description of the submission')
-        .addStringOption(submissionNameStringOption)
-    )
-
-    builder.addSubcommand(cmd =>
-      cmd.setName('source')
-        .setDescription('Edits the source link of the submission')
-        .addStringOption(submissionNameStringOption)
-    )
-
-    builder.addSubcommand(cmd =>
-      cmd.setName('other')
-        .setDescription('Edits the other links of the submission')
-        .addStringOption(submissionNameStringOption)
-    )
-
-    builder.addSubcommand(cmd =>
-      cmd.setName('technologies')
-        .setDescription('Edits the technologies of the submission')
-        .addStringOption(submissionNameStringOption)
-    )
-  },
-  onAutocomplete: submissionNameAutocompleteProvider,
-  onModalSubmit: async (client, interaction, submission) => {
-    const newData = interaction.fields.getTextInputValue('newData')
-    const type = extractType(interaction)
-
-    if (type.err) {
-      return Err(type.val)
-    }
-
-    submission.updateValue(type.val, newData)
-
-    const updateRes = await client.submissions.update(submission)
-
-    if (updateRes.err) {
-      await interaction.reply({
-        content: 'Failed to save the new content to the DB, please try again.',
-        ephemeral: true
-      })
-
-      return Ok.EMPTY
-    }
-
-    const messageRes = await Result.wrapAsync(async () => await submission.message.edit({
-      // 'toIncoming' produces an object of type 'IncomingSubmissionData' which 'privateSubmission' needs
-      // this object would be tedious to construct at every usage
-      // this has to happen because the private submission must be available before a model is available
-      embeds: [embeds.privateSubmission(submission.toIncoming(), submission.author)]
-    }))
-
-    if (messageRes.err) {
-      await interaction.reply({
-        content: 'Failed to edit the submission embed, please try again.',
-        ephemeral: true
-      })
-
-      return Ok.EMPTY
-    }
-
-    await interaction.reply({
-      content: `Edited the ${type.val} succesfully!`
+export default class EditCommand extends SlashCommand {
+  constructor (creator: SlashCreator) {
+    super(creator, {
+      name: 'edit',
+      description: 'Edit a value of a submission.',
+      guildIDs: getAssignedGuilds({ includeMain: true }),
+      options: [
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'name',
+          description: 'Edits the name of a submission'
+        },
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'author',
+          description: 'Edits the author of a submission'
+        },
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'description',
+          description: 'Edits the description of a submission'
+        },
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'source',
+          description: 'Edits the source links of a submission'
+        },
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'other',
+          description: 'Edits the other links of a submission'
+        },
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'technologies',
+          description: 'Edits the technologies of a submission'
+        }
+      ]
     })
+  }
 
-    return Ok.EMPTY
-  },
-  run: async (client, interaction) => {
-    const submission = await getRelevantSubmission(client, interaction)
+  async run (ctx: CommandContext): Promise<void> {
+    const submission = await fetchSubmissionForContext(ctx)
 
-    if (submission.err) {
-      return Err(submission.val)
+    if (!submission) {
+      return
     }
 
-    if (!submission.val) {
-      // Errors are handled and reported above
-      return Ok.EMPTY
+    const subcommand = ctx.subcommands[0]
+
+    // This would be a Discord API failure
+    assert(!!subcommand, 'subcommand was not set')
+
+    logger.debug(
+      `Beginning edit of ${subcommand} for ${stringify.submission(submission)}`
+    )
+
+    let oldValue: string
+    let updateFn: (val: string) => void | Promise<void>
+
+    switch (subcommand) {
+      case 'name':
+        oldValue = submission.name
+        updateFn = async (val: string) => {
+          submission.name = val
+          await updateName(submission, val)
+        }
+        break
+      case 'author':
+        // Only allow author updates in error state
+        if (submission.state !== 'ERROR') {
+          commandLog.warning({
+            type: 'text',
+            content:
+              'Cannot update author if the submission is not in an error state.',
+            ctx
+          })
+          return
+        }
+        oldValue = submission.authorId
+        updateFn = async (val: string) => {
+          submission.authorId = val
+          await updateAuthorId(submission, val)
+        }
+        break
+      case 'description':
+        oldValue = submission.description
+        updateFn = async (val: string) => {
+          submission.description = val
+          await updateDescription(submission, val)
+        }
+        break
+      case 'source':
+        oldValue = submission.links.source
+        updateFn = async (val: string) => {
+          submission.links.source = val
+          await updateSourceLink(submission, val)
+        }
+        break
+      case 'other':
+        oldValue = submission.links.other
+        updateFn = async (val: string) => {
+          submission.links.other = val
+          await updateOtherLink(submission, val)
+        }
+        break
+      case 'technologies':
+        oldValue = submission.links.other
+        updateFn = async (val: string) => {
+          submission.tech = val
+          await updateTechnologies(submission, val)
+        }
+        break
+      default:
+        assert(false, 'unreachable')
     }
 
-    // Proceed with edit
-    await doEdit(submission.val, interaction)
+    await ctx.sendModal(
+      {
+        title: `Edit the ${subcommand}`,
+        components: [
+          {
+            type: ComponentType.ACTION_ROW,
+            components: [
+              {
+                type: ComponentType.TEXT_INPUT,
+                label: `New ${subcommand}`,
+                style: TextInputStyle.PARAGRAPH,
+                custom_id: 'new_value',
+                value: oldValue
+              }
+            ]
+          }
+        ]
+      },
+      (mctx) =>
+        // Handled separately so we can use async/await without eslint complaining it wouldnt work because of argument types
+        void this.handleModal(mctx, subcommand, oldValue, submission, updateFn)
+    )
+  }
 
-    return Ok.EMPTY
+  async handleModal (
+    mctx: ModalInteractionContext,
+    subcommand: string,
+    oldValue: string,
+    submission: ValidatedSubmission | PendingSubmission,
+    updateFn: (val: string) => Promise<void> | void
+  ): Promise<void> {
+    const newValue = mctx.values.new_value
+    logger.debug(
+      `Setting ${subcommand} to ${newValue} from ${oldValue} on submission ${stringify.submission(
+        submission
+      )}`
+    )
+
+    // Wait for the update to complete
+    // Rethrows because if we fail to update, we wont be able to validate below
+    await runCatching(() => updateFn(newValue), 'rethrow')
+
+    logger.trace('Set successfuly')
+
+    // Already validated
+    if (isValidated(submission)) {
+      logger.trace('Submission already validated')
+
+      await updateMessage(
+        submission.submissionMessage,
+        createEmbed(submission)
+      )
+      await updateThreadName(submission.reviewThread, submission.name)
+
+      await mctx.send({
+        content: `Updated the ${subcommand} successfuly`,
+        ...DEFAULT_MESSAGE_OPTS_SLASH,
+        ephemeral: false
+      })
+      return
+    }
+
+    logger.trace('Submission not validated, running validation')
+    // Submission should be valid after calling updateFn
+    const validated = await validatePendingSubmission(submission)
+    await updateMessage(validated.submissionMessage, createEmbed(submission))
+    await updateThreadName(validated.reviewThread, validated.name)
+    await mctx.send({
+      content: `Updated the ${subcommand} successfuly`,
+      ...DEFAULT_MESSAGE_OPTS_SLASH,
+      ephemeral: false
+    })
   }
 }
-
-function extractType (interaction: ModalSubmitInteraction<'cached'>): Result<EditType, Error> {
-  return fromCustomId(interaction.customId).map(val => val.type)
-}
-
-function makeModal (submission: Submission, type: EditType): Modal {
-  const existingData = {
-    name: () => submission.name,
-    description: () => submission.description,
-    source: () => submission.links.source,
-    other: () => submission.links.other,
-    technologies: () => submission.techUsed
-  }[type]()
-
-  return new Modal()
-    .setTitle(`Edit ${type}`)
-    .setCustomId(toCustomId({ name: 'edit', id: submission.id, type }))
-    .addComponents(
-      new MessageActionRow<TextInputComponent>()
-        .addComponents(
-          new TextInputComponent()
-            .setLabel(`New ${type}`)
-            .setCustomId('newData')
-            .setRequired(true)
-            .setValue(existingData)
-            .setStyle('PARAGRAPH')
-        )
-    )
-}
-
-async function doEdit (submission: Submission, interaction: CommandInteraction<'cached'>): Promise<void> {
-  assert(interaction.channel !== null, 'interaction came without a channel')
-
-  const type = interaction.options.getSubcommand(true) as EditType
-
-  await interaction.showModal(makeModal(submission, type))
-}
-
-export default edit

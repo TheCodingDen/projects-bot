@@ -1,93 +1,141 @@
-import { Snowflake } from 'discord.js'
+import * as env from './utils/env'
 
-interface RejectionTemplateParams { user: Snowflake, name: string }
-// TODO: validate that the config matches a certain shape
-
-const descriptions = [
-  { name: 'No license', value: 'no-license' },
-  { name: 'Invalid license (Non OSI / not immediately visible)', value: 'invalid-license' },
-  { name: 'Inaccessable repository', value: 'inaccessable-repository' },
-  { name: 'Empty repository', value: 'empty-repository' },
-  { name: 'Invalid link (Not GitHub or GitLab)', value: 'invalid-repository' },
-  { name: 'Invalid user ID', value: 'invalid-id' },
-  { name: 'Plagiarism', value: 'plagiarism' },
-  { name: 'Advertisement', value: 'ad' }
-] as const
+// User mention and submission name
+interface RejectionParams { user: string, name: string }
 
 const config = {
-  rejection: {
-    // A whitelist of reasons we send to public review instead of thread
-    reviewWhitelist: ['invalid-id'],
-    templates: {
-      'no-license': ({ user }: RejectionTemplateParams) => `<@${user}>, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and resubmit. See <https://choosealicense.com/> for more information`,
-      'invalid-license': ({ user }: RejectionTemplateParams) => `<@${user}>, your project has been rejected because it contains a non-OSI license or the license is not immediately visible in the root of the project. Please use an OSI license in a file called LICENSE, LICENSE.txt or LICENSE.md and resubmit. See <https://choosealicense.com/> for more information.`,
-      'inaccessable-repository': ({ user }: RejectionTemplateParams) => `<@${user}>, your project has been rejected because the provided repository link could not be accessed. Please double check the URL, privacy settings and account information, then resubmit.`,
-      'empty-repository': ({ user }: RejectionTemplateParams) => `<@${user}>, your project has been rejected because the provided repository was empty. Please double check the URL and account information, then resubmit.`,
-      'invalid-repository': ({ user }: RejectionTemplateParams) => `<@${user}>, your project has been rejected because the provided link did not point to a valid GitHub or GitLab repository. Please double check the URL and account information, then resubmit.`,
-      'invalid-id': ({ name }: RejectionTemplateParams) => `To whomever submitted "${name}", the provided ID was invalid. You must resubmit with a valid user ID for your project to be reviewed. For help with getting your ID, see <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`,
-      plagiarism: ({ user }: RejectionTemplateParams) => `<@${user}>, your project has been rejected because it is blatant plagiarism. Do not resubmit and do not submit plagiarised projects again.`,
-      ad: ({ user }: RejectionTemplateParams) => `<@${user}>, your project has been rejected because it is an advertisement to another service / platform. This goes against our policy on advertisements <https://docs.thecodingden.net/community-policy-center/rules#ads>. Do not resubmit this project.`
-    } as const,
-    descriptions
-  },
-  help: {
-    // Intentionally left blank. If we need to specify extra help for a command, it can go here.
-    commands: {
-      edit: '',
-      reject: '',
-      help: 'When ran without a command, the help is provided as an ephemeral message.',
-      create: ''
+  /**
+   * Config for the forceful rejection feature.
+   */
+  rejection: () => ({
+    /**
+     * The enum values to use in the /reject slash command.
+     */
+    enumValues: [
+      { name: 'No license', value: 'no-license' },
+      { name: 'Invalid license (Non OSI / not immediately visible)', value: 'invalid-license' },
+      { name: 'Inaccessable repository', value: 'inaccessable-repository' },
+      { name: 'Empty repository', value: 'empty-repository' },
+      { name: 'Invalid link (Not GitHub or GitLab)', value: 'invalid-repository' },
+      { name: 'Invalid user ID', value: 'invalid-id' },
+      { name: 'Plagiarism', value: 'plagiarism' },
+      { name: 'Advertisement', value: 'ad' }
+    ],
+    /**
+     * The rejection reasons that are logged in the public logs rather than in a private review thread.
+     */
+    publiclyLogged: ['invalid-id'],
+    /**
+     * The lookup table to go from enum keys to log friendly outputs.
+     */
+    logLookup: {
+      'no-license': 'No license',
+      'invalid-license': 'Invalid license',
+      'inaccessable-repository': 'Inaccessable repository',
+      'empty-repository': 'Empty repository',
+      'invalid-repository': 'Invalid repository',
+      'invalid-id': 'Invalid user ID',
+      plagiarism: 'Plagiarism',
+      ad: 'Advertisement'
     },
-    general:
-`
-**General**
-  ⮞ Applying the final vote on a project (in accordance with the voting thresholds) will action that and remove it from <#813496732901965924>
+    /**
+     * The lookup table to go from enum keys to rejection reason templates.
+     * This is used in the feedback thread.
+     */
+    templates: {
+      'no-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and then resubmit. See <https://choosealicense.com/> for more information`,
+      'invalid-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because it contains a non-OSI license or the license is not immediately visible in the root of the project. Please use an OSI license in a file called LICENSE, LICENSE.txt or LICENSE.md and resubmit. See <https://choosealicense.com/> for more information.`,
+      'inaccessable-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository link could not be accessed. Please double check the URL, privacy settings and account information, then resubmit.`,
+      'empty-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository was empty. Please double check the URL and account information, then resubmit.`,
+      'invalid-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided link did not point to a valid GitHub or GitLab repository. Please double check the URL and account information, then resubmit`,
+      'invalid-id': ({ name }: RejectionParams) => `To whomever submitted "${name}", the provided ID was invalid. Please provide us with your ID so we can process your submission. For help with getting your ID, see <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`,
+      plagiarism: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is blatant plagiarism. Do not resubmit and do not submit plagiarised projects again.`,
+      ad: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is an advertisement to another service / platform. This goes against our policy on advertisements <https://docs.thecodingden.net/community-policy-center/rules#ads>. Do not resubmit this project.`
+    }
+  }),
+  /**
+   * Config for the backend API
+   */
+  api: () => ({
+    port: env.number('PORT'),
+    key: env.string('API_AUTH_KEY')
+  }),
+  /**
+   * Config for the active guilds in the bot.
+   */
+  guilds: () => ({
+    current: env.guild(process.env.NODE_ENV === 'production' ? 'MAIN_GUILD_ID' : 'DEVELOPMENT_GUILD_ID')
+  }),
+  /**
+   * Config for the active channels in the bot.
+   */
+  channels: () => ({
+    privateSubmissions: env.textChannel('PRIVATE_SUBMISSION_CHANNEL'),
+    privateLogs: env.textChannel('PRIVATE_LOG_CHANNEL'),
+    publicLogs: env.textChannel('PUBLIC_LOG_CHANNEL'),
+    internalLogs: env.textChannel('INTERNAL_LOG_CHANNEL'),
+    publicShowcase: env.textChannel('PUBLIC_SHOWCASE_CHANNEL'),
 
+    feedbackThreadChannel: env.textChannel('FEEDBACK_THREAD_CHANNEL')
+  }),
+  /**
+   * Config for the active roles in the bot.
+   */
+  roles: () => ({
+    veterans: env.role('VETERANS_ROLE_ID', env.guild(process.env.NODE_ENV === 'production' ? 'MAIN_GUILD_ID' : 'DEVELOPMENT_GUILD_ID')),
+    staff: env.role('STAFF_ROLE_ID', env.guild(process.env.NODE_ENV === 'production' ? 'MAIN_GUILD_ID' : 'DEVELOPMENT_GUILD_ID'))
+  }),
+  /**
+   * Config for the voting system.
+   */
+  vote: () => ({
+    threshold: env.number('VOTING_THRESHOLD')
+  }),
+  /**
+   * Config to hold the emojis used throughout the bot.
+   */
+  emojis: () => ({
+    button: {
+      upvote: '⬆️',
+      downvote: '⬇️',
+      pause: '⏸️',
+      clearWarnings: '❎'
+    },
+    log: {
+      info: '🟢',
+      warning: '🟡',
+      error: '🔴'
+    }
+  }),
+  /**
+   * Config to hold the colour codes used throughout the bot
+   */
+  colours: () => ({
+    embedState: {
+      ERROR: 0XFF7878,
+      WARNING: 0XE5EBB2,
+      PAUSED: 0XF8C4B4,
+      PROCESSING: 0X90C8AC,
+      RAW: 0X90C8AC
+    },
+    log: {
+      info: 0X90C8AC,
+      warning: 0XE5EBB2,
+      error: 0XFF7878,
 
-**Threads**
-__Review threads__
-  ⮞ Automatically created by the bot on submission
-  ⮞ Should be reopened if they automatically archive and the project has not been processed
-
-__Rejection threads__
-  ⮞ Must be manually created
-  ⮞ Must be titled "PROJECT_NAME"
-  ⮞ Must be set to "Private"
-  ⮞ Notify a staff member if anything goes wrong with creation
-  ⮞ May mention any relevant reviewers
-      
-  ⮞ May link directly to the repository
-  ⮞ May state resubmission guidance if applicable
-
-
-**Instant rejection**
-  Projects may be instantly rejected if they breach any of the following criteria:
-${descriptions.map(d => `    ⮞ ${d.name}`).join('\n')}
-  
-  ⮞ Mention a staff member to action an instant rejection
-
-
-**Submitting your own project**
-You may submit your own project under the following terms:
-  ⮞ You do not vote on your own project
-  ⮞ You do not pre-emptively read feedback and make changes
-  ⮞ You do not interfere with feedback
-
-
-**Miscellaneous**
-  ⮞ User mention format: \`<@ID>\`
-  ⮞ You can assign reviewer roles through <#987102838171770972>
-
-
-**Useful links**
-  ⮞ Review guidelines: https://canary.discord.com/channels/172018499005317120/743463081199271966/76597609340862464
-  ⮞ Voting thresholds: https://canary.discord.com/channels/172018499005317120/813496732901965924/813501831073890385
-  ⮞ Valid license list: https://opensource.org/licenses/alphabetical
-  ⮞ Choose a license: https://choosealicense.com/
-`
-  }
-} as const
-
-export type ValidRejectionKey = keyof typeof config.rejection.templates
+      accepted: 0X08FF08,
+      pause: 0XCCFF00,
+      denied: 0XD41920
+    },
+    publicEmbed: 0x4A90E2
+  }),
+  /**
+   * Config for using the GitHub API in the bot.
+   *
+   */
+  github: () => ({
+    token: env.string('GITHUB_API_TOKEN')
+  })
+}
 
 export default config

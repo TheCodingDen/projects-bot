@@ -1,129 +1,296 @@
+import assert from 'assert'
+import {
+  SlashCommand,
+  SlashCreator,
+  CommandContext,
+  CommandOptionType,
+  ComponentType,
+  TextInputStyle,
+  ButtonStyle
+} from 'slash-create'
+import { commandLog } from '../communication/interaction'
+import { createDraft, deleteDraft } from '../db/draft'
+import { Draft } from '../types/draft'
+import { isValidated, ValidatedSubmission } from '../types/submission'
+import { fetchSubmissionForContext } from '../utils/commands'
+import { DEFAULT_MESSAGE_OPTS_SLASH } from '../utils/communication'
+import { getAssignedGuilds } from '../utils/discordUtils'
+import { runCatching } from '../utils/request'
+import { stringify } from '../utils/stringify'
 
-import { CommandInteraction, MessageActionRow, Modal, TextInputComponent } from 'discord.js'
-import { Err, Ok, Result } from 'ts-results'
-import { Command } from '../managers/commands'
-import { Submission } from '../models/submission'
-import { assert } from '../utils/assert'
-import { getCustomIdAdapters } from '../utils/custom-id'
-import { getRelevantSubmission, submissionNameAutocompleteProvider, submissionNameStringOption } from './utils'
-
-const { from: fromCustomId, to: toCustomId } = getCustomIdAdapters()
-
-const draft: Command = {
-  name: 'draft',
-  description: 'Controls draft rejection messages for a project',
-  permissionLevel: 'veterans',
-  configureBuilder: builder => {
-    builder.addSubcommand(cmd =>
-      cmd.setName('create')
-        .setDescription('Creates a new draft for a project')
-        .addStringOption(submissionNameStringOption)
-    )
-
-    builder.addSubcommand(cmd =>
-      cmd.setName('show')
-        .setDescription('Show the latest draft for a project')
-        .addStringOption(submissionNameStringOption)
-    )
-  },
-  shouldPublishGlobally: true,
-  onAutocomplete: submissionNameAutocompleteProvider,
-  onModalSubmit: async (client, interaction) => {
-    const idRes = fromCustomId(interaction.customId)
-
-    if (idRes.err) {
-      return Err(idRes.val)
-    }
-
-    const { id: submissionId } = idRes.val
-
-    const submissionRes = await client.submissions.fetch(submissionId)
-
-    if (submissionRes.err) {
-      await interaction.reply({
-        content: 'Something went wrong when trying to update the draft, please try again.',
-        ephemeral: true
-      })
-      return Err(submissionRes.val)
-    }
-
-    const submission = submissionRes.val
-    const draft = interaction.fields.getTextInputValue('draft')
-
-    // Because we use a DB generated ID, this function pushes the value to the DB
-    // and then updates our model, so we do not have to call for an update afterwards
-    await submission.drafts.push(draft)
-
-    await interaction.reply({
-      content: 'Added the draft successfully!'
+export default class DraftCommand extends SlashCommand {
+  constructor (creator: SlashCreator) {
+    super(creator, {
+      name: 'draft',
+      description: 'Manages draft rejection messages for a submission',
+      guildIDs: getAssignedGuilds({ includeMain: true }),
+      options: [
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'add',
+          description: 'Updates the current draft for a submission'
+        },
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'clear',
+          description: 'Clears the current draft for a submission'
+        },
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'view',
+          description: 'Views the current draft for a submission'
+        },
+        {
+          type: CommandOptionType.SUB_COMMAND,
+          name: 'history',
+          description: 'Views the draft history for a submission'
+        }
+      ]
     })
-
-    return Ok.EMPTY
-  },
-  run: async (client, interaction) => {
-    const submission = await getRelevantSubmission(client, interaction)
-
-    if (submission.err) {
-      return Err(submission.val)
-    }
-
-    if (!submission.val) {
-      // Errors are handled and reported above
-      return Ok.EMPTY
-    }
-
-    const subCommand = interaction.options.getSubcommand(true)
-
-    if (subCommand === 'create') {
-      return await createDraft(submission.val, interaction)
-    } else if (subCommand === 'show') {
-      return await showDraft(submission.val, interaction)
-    }
-
-    assert(false, `unrecognised subcommand ${subCommand}`)
   }
-}
 
-function makeModal (submission: Submission): Modal {
-  const currentDraft = submission.drafts.currentDraft()?.content ?? `<@${submission.author.id}>, unfortunately your project has been rejected. `
+  async run (ctx: CommandContext): Promise<void> {
+    const submission = await fetchSubmissionForContext(ctx)
 
-  return new Modal()
-    .setTitle(`Submit a new draft for ${submission.name}`)
-    .setCustomId(toCustomId({ name: 'draft', id: submission.id }))
-    .addComponents(
-      new MessageActionRow<TextInputComponent>()
-        .addComponents(
-          new TextInputComponent()
-            .setLabel('Draft')
-            .setCustomId('draft')
-            .setRequired(true)
-            .setValue(currentDraft)
-            .setStyle('PARAGRAPH')
-        )
-    )
-}
+    if (!submission) {
+      return
+    }
 
-async function showDraft (submission: Submission, interaction: CommandInteraction<'cached'>): Promise<Result<void, Error>> {
-  const draft = submission.drafts.currentDraft() ?? { content: 'None', id: 0 }
-  const content =
-`
-**Current draft:**
+    const subcommand = ctx.subcommands[0]
 
+    // This would be a Discord API failure
+    assert(!!subcommand, 'subcommand was not set')
+
+    if (!isValidated(submission)) {
+      commandLog.warning({
+        type: 'text',
+        content:
+          'Cannot use drafts on a submission with warnings, or a paused submission, please resolve issues and retry.',
+        ctx
+      })
+      return
+    }
+
+    switch (subcommand) {
+      case 'add':
+        await this.addNewDraft(ctx, submission)
+        return
+      case 'view':
+        await this.viewCurrentDraft(ctx, submission)
+        return
+      case 'clear':
+        await this.clearCurrentDraft(ctx, submission)
+        return
+      case 'history':
+        await this.viewDraftHistory(ctx, submission)
+    }
+  }
+
+  async viewDraftHistory (
+    ctx: CommandContext,
+    submission: ValidatedSubmission
+  ): Promise<void> {
+    const drafts = submission.drafts.reverse()
+    let currentIdx = 0
+
+    if (!drafts.length) {
+      commandLog.error({
+        type: 'text',
+        content: 'No draft set.',
+        ctx
+      })
+      return
+    }
+
+    const generateDraftString = (draft: Draft): string => {
+      return `
 ${draft.content}
 
+id: ${draft.id}
+author: ${draft.author.user.tag}
+timestamp: ${draft.timestamp.toLocaleString()}
+      `
+    }
 
-__Draft ID: ${draft.id}__
-`
+    await ctx.send({
+      content: generateDraftString(drafts[0]),
+      components: [
+        {
+          type: ComponentType.ACTION_ROW,
+          components: [
+            {
+              type: ComponentType.BUTTON,
+              custom_id: 'previous',
+              label: 'Previous',
+              style: ButtonStyle.PRIMARY
+            },
+            {
+              type: ComponentType.BUTTON,
+              custom_id: 'clear',
+              label: 'Clear',
+              style: ButtonStyle.DESTRUCTIVE
+            },
+            {
+              type: ComponentType.BUTTON,
+              custom_id: 'next',
+              label: 'Next',
+              style: ButtonStyle.PRIMARY
+            }
+          ]
+        }
+      ]
+    })
 
-  await interaction.reply({
-    content
-  })
-  return Ok.EMPTY
+    const message = await ctx.fetch()
+
+    ctx.registerComponentFrom(message.id, 'previous', (bctx) => {
+      if (currentIdx === 0) {
+        // Skip to last
+        currentIdx = drafts.length - 1
+      } else {
+        currentIdx -= 1
+      }
+
+      void runCatching(async () => {
+        await bctx.acknowledge()
+
+        await message.edit({
+          content: generateDraftString(drafts[currentIdx]),
+          ...DEFAULT_MESSAGE_OPTS_SLASH
+        })
+      }, 'rethrow')
+    })
+
+    ctx.registerComponentFrom(message.id, 'next', (bctx) => {
+      if (currentIdx === drafts.length - 1) {
+        // Skip to front
+        currentIdx = 0
+      } else {
+        currentIdx += 1
+      }
+
+      void runCatching(async () => {
+        await bctx.acknowledge()
+
+        await message.edit({
+          content: generateDraftString(drafts[currentIdx]),
+          ...DEFAULT_MESSAGE_OPTS_SLASH
+        })
+      }, 'rethrow')
+    })
+
+    ctx.registerComponentFrom(message.id, 'clear', () => {
+      void runCatching(async () => await message.delete(), 'rethrow')
+    })
+  }
+
+  async clearCurrentDraft (
+    ctx: CommandContext,
+    submission: ValidatedSubmission
+  ): Promise<void> {
+    // TODO: confirmation?
+
+    const hasDraft = submission.drafts.length > 0
+
+    if (!hasDraft) {
+      commandLog.error({
+        type: 'text',
+        content: 'No draft set.',
+        ctx
+      })
+      return
+    }
+
+    const id = submission.drafts[0].id
+    await deleteDraft(id)
+
+    commandLog.info({
+      type: 'text',
+      content: `Deleted draft ${id}.`,
+      ctx
+    })
+  }
+
+  async addNewDraft (
+    ctx: CommandContext,
+    submission: ValidatedSubmission
+  ): Promise<void> {
+    const oldValue =
+      submission.drafts[0]?.content ??
+      `<@${submission.authorId}>, unfortunately, your project has been rejected.`
+
+    await ctx.sendModal(
+      {
+        title: 'Draft rejection message',
+        components: [
+          {
+            type: ComponentType.ACTION_ROW,
+            components: [
+              {
+                type: ComponentType.TEXT_INPUT,
+                label: 'Draft',
+                style: TextInputStyle.PARAGRAPH,
+                custom_id: 'newValue',
+                value: oldValue
+              }
+            ]
+          }
+        ]
+      },
+      (mctx) => {
+        const { newValue } = mctx.values
+        logger.debug(
+          `Adding draft ${newValue} to submission ${stringify.submission(
+            submission
+          )}`
+        )
+
+        void createDraft(newValue, mctx.user.id, submission.id)
+
+        void runCatching(
+          async () => {
+            await mctx.send({
+              content: 'Added new draft successfully.'
+            })
+
+            await mctx.sendFollowUp({
+              content: newValue
+            })
+          },
+          'rethrow'
+        )
+      }
+    )
+  }
+
+  async viewCurrentDraft (
+    ctx: CommandContext,
+    submission: ValidatedSubmission
+  ): Promise<void> {
+    const current = submission.drafts[0]
+
+    if (!current) {
+      commandLog.error({
+        type: 'text',
+        content: 'No draft set.',
+        ctx
+      })
+      return
+    }
+
+    commandLog.info({
+      type: 'text',
+      content: `
+${current.content}
+
+id: ${current.id}
+author: ${current.author.user.tag}
+timestamp: <t:${current.timestamp.getUTCMilliseconds()}:f> (<t:${current.timestamp.getUTCMilliseconds()}:R>)
+`,
+      ctx,
+      extraOpts: {
+        ephemeral: false
+      }
+    })
+  }
 }
-
-async function createDraft (submission: Submission, interaction: CommandInteraction<'cached'>): Promise<Result<void, Error>> {
-  await interaction.showModal(makeModal(submission))
-  return Ok.EMPTY
-}
-
-export default draft

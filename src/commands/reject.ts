@@ -1,127 +1,131 @@
-import { TextBasedChannel } from 'discord.js'
-import { Err, Ok, Result } from 'ts-results'
-import { ProjectsClient } from '../client'
-import { ValidRejectionKey } from '../config'
-import { Command } from '../managers/commands'
-import { Submission } from '../models/submission'
-import { instantlyReject, submissionCleanup } from '../utils/actionVotes'
-import { log } from '../utils/logger'
-import { getRelevantSubmission, submissionNameAutocompleteProvider, submissionNameStringOption } from './utils'
+import assert from 'assert'
+import {
+  SlashCommand,
+  SlashCreator,
+  CommandContext,
+  CommandOptionType
+} from 'slash-create'
+import { commandLog } from '../communication/interaction'
+import { internalLog } from '../communication/internal'
+import config from '../config'
+import { fetchSubmissionForContext } from '../utils/commands'
+import { getAssignedGuilds } from '../utils/discordUtils'
+import { stringify } from '../utils/stringify'
+import { forceReject } from '../vote/action'
 
-const reject: Command = {
-  name: 'reject',
-  description: 'Instantly rejects a project with a preset reason',
-  permissionLevel: 'staff',
-  shouldPublishGlobally: true,
-  configureBuilder: (builder, client) => {
-    builder.addStringOption(str =>
-      str.setName('reason')
-        .setDescription('The reason to reject the project.')
-        .setChoices(...client.config.rejectionDescriptions())
-        .setRequired(true)
-    )
-      .addStringOption(submissionNameStringOption)
-  },
-  onAutocomplete: submissionNameAutocompleteProvider,
-  run: async (client, interaction) => {
-    const submissionRes = await getRelevantSubmission(client, interaction)
+export default class RejectCommand extends SlashCommand {
+  constructor (creator: SlashCreator) {
+    super(creator, {
+      name: 'reject',
+      description: 'Instantly rejects a project with a preset reason.',
+      guildIDs: getAssignedGuilds({ includeMain: true }),
+      options: [
+        {
+          type: CommandOptionType.STRING,
+          name: 'reason',
+          description: 'The rejection reason.',
+          required: true,
+          choices: config.rejection().enumValues
+        }
+      ]
+    })
+  }
 
-    if (submissionRes.err) {
-      return Err(submissionRes.val)
+  async run (ctx: CommandContext): Promise<void> {
+    const { logLookup, templates } = config.rejection()
+    // Discord validates the enum, thus the cast is safe
+    const rawReason = ctx.options.reason as keyof typeof templates
+
+    // This would be a Discord API failure
+    assert(!!rawReason, 'no reason set')
+
+    // Retrieve d.js member
+    const member = await config.guilds().current.members.fetch(ctx.user.id)
+
+    const submission = await fetchSubmissionForContext(ctx)
+
+    if (!submission) {
+      return
     }
 
-    if (!submissionRes.val) {
-      // Errors are handled and reported above
-      return Ok.EMPTY
-    }
-
-    const submission = submissionRes.val
-
-    // Casting is OK, we control the data, we just have to ensure that the objects are alligned
-    const reasonName = interaction.options.getString('reason', true) as ValidRejectionKey
-    const rejectionTemplates = client.config.rejectionTemplates()
-
-    const template = rejectionTemplates[reasonName]
-
-    if (!template) {
-      await interaction.reply({
-        content: `Could not find corresponding template for reason ${reasonName}, please report this.`
+    if (submission.state === 'ERROR') {
+      commandLog.warning({
+        type: 'text',
+        content:
+          'Cannot reject a project in an error state, please resolve the errors and retry.',
+        ctx
       })
-
-      return Ok.EMPTY
+      return
     }
 
-    const reason = template({
-      user: submission.author.id,
+    if (submission.state === 'PAUSED') {
+      commandLog.warning({
+        type: 'text',
+        content:
+          'Cannot reject a paused project, please unpause the project and retry.',
+        ctx
+      })
+      return
+    }
+
+    const template = templates[rawReason]
+    const logOutput = logLookup[rawReason]
+
+    logger.debug(
+      `Starting instant rejection for submission ${stringify.submission(
+        submission
+      )} (reason: ${logOutput})`
+    )
+
+    // This means Discord gave us a reason that wasnt in the object,
+    // could be caused by misconfiguration or API failure.
+    assert(!!template, 'template was not set')
+    assert(!!logOutput, 'logOutput was not set')
+
+    const templatedReason = template({
+      user: `<@${submission.authorId}>`,
       name: submission.name
     })
 
-    const didSendRejection = await sendPrivateFeedback(client, submission, reason, reasonName)
+    commandLog.info({
+      type: 'text',
+      content: `Rejecting submission for reason ${logOutput}`,
+      ctx,
+      extraOpts: {
+        ephemeral: false
+      }
+    })
 
-    if (!didSendRejection) {
-      await interaction.reply({
-        content: `Could not send rejection message for project ${submission.name}, please create the thread manually and send the message:\n\n\`${reason}\``
+    const rejectionResult = await forceReject(member, submission, {
+      templatedReason,
+      rawReason
+    })
+
+    if (rejectionResult.error) {
+      // Could not reject, send template to review thread
+      commandLog.info({
+        type: 'text',
+        content: `Failed to send feedback, please send the following message in a feedback thread: \n \`\`\`\n${templatedReason}\`\`\``,
+        ctx,
+        extraOpts: {
+          ephemeral: false
+        }
       })
+
+      // Errors should already be reported, but doing it again does no harm
+      // and provides more context in the logs than "request failed"
+      internalLog.error({
+        type: 'text',
+        content: rejectionResult.message,
+        ctx: submission
+      })
+
+      return
     }
 
-    // The last param forces the cleanup function to not run, as that would interfere with further messages we send to the channel
-    // This is required because if we fail to send the rejection message, and the user has to do this manually
-    // archiving the thread would make the message go away and would result in poor UX
-    await instantlyReject(submission, interaction.user, reasonName, client, false)
-
-    await client.submissions.update(submission)
-
-    // Either reply if it's the first message, or follow up if it's the second
-    await interaction[didSendRejection ? 'reply' : 'followUp']({
-      // 'completed' because it might not have worked all the way, but we're done with it
-      content: `Rejection completed for project: ${submission.name} with Reason ${reasonName}`
-    })
-
-    if (didSendRejection) {
-      // Run cleanup now, if we managed to send the rejection message
-      // otherwise, don't, as the user will need to keep the thread open to copy the message
-      await submissionCleanup(submission, client, 'denied')
-    }
-    return Ok.EMPTY
+    assert(
+      rejectionResult.outcome === 'instant-reject',
+      'result did not have outcome instant-reject'
+    )
   }
 }
-
-async function sendPrivateFeedback (client: ProjectsClient, submission: Submission, content: string, reason: ValidRejectionKey): Promise<boolean> {
-  const { publicFeedback } = client.config.channels()
-
-  let channel: TextBasedChannel
-
-  if (client.config.rejectionWhitelist().includes(reason)) {
-    channel = publicFeedback
-  } else {
-    const channelRes = await Result.wrapAsync(async () => await publicFeedback.threads.create({
-      name: submission.name,
-      type: client.config.botSettings().threadPrivacy
-    }))
-
-    if (channelRes.err) {
-      log.error('Failed to create private feedback thread')
-      log.error(channelRes.val)
-
-      return false
-    }
-
-    channel = channelRes.val
-  }
-
-  const messageRes = await Result.wrapAsync(async () =>
-    await channel.send({
-      content
-    })
-  )
-
-  if (messageRes.err) {
-    log.error('Failed to send messages to private feedback thread')
-    log.error(messageRes.val)
-
-    return false
-  }
-
-  return true
-}
-export default reject
