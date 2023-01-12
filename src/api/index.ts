@@ -1,6 +1,7 @@
 import assert from 'assert'
 import { ActionRowBuilder, ButtonBuilder, Message, ThreadChannel } from 'discord.js'
 import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { creator } from '..'
 import config from '../config'
 import {
   saveApiData,
@@ -291,6 +292,11 @@ server.post(
     return await handleRequest(req, res)
   }
 )
+
+server.post('/refresh-commands', async (_, res) => {
+  creator.syncCommands()
+  res.statusCode = 204
+})
 
 export async function setup (): Promise<void> {
   try {

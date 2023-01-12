@@ -29,7 +29,7 @@ export const client = new Client({
   ]
 })
 
-const creator = new SlashCreator({
+export const creator = new SlashCreator({
   applicationID: process.env.DISCORD_APP_ID as string,
   token: process.env.DISCORD_BOT_TOKEN,
   client
