@@ -134,7 +134,7 @@ function onSubmit (e: GoogleAppsScript.Events.FormsOnFormSubmit): void {
     contentType: 'application/json',
     payload: JSON.stringify(payload),
     headers: {
-      Authentication: token
+      Authorization: token
     }
   })
 }
