@@ -46,7 +46,7 @@
     "koa": "^2.13.4",
     "pino": "^8.1.0",
     "pino-pretty": "^8.1.0",
-    "prisma": "^4.0.0",
+    "prisma": "^4.8.1",
     "slash-create": "^5.9.0",
     "slash-up": "^1.2.0"
   },
