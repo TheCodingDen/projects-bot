@@ -1,6 +1,8 @@
 import assert from 'assert'
 import { SlashCommand, SlashCreator, CommandContext, CommandOptionType } from 'slash-create'
 import { commandLog } from '../communication/interaction'
+import { privateLog } from '../communication/private'
+import config from '../config'
 import { updateSubmissionState } from '../db/submission'
 import { isPending } from '../types/submission'
 import { fetchSubmissionForContext } from '../utils/commands'
@@ -67,5 +69,29 @@ export default class CleanupCommand extends SlashCommand {
         ctx
       })
     }
+
+    privateLog.info({
+      type: 'embed',
+      embed: {
+        title: submission.name,
+        description: `**${ctx.user.username}#${ctx.user.discriminator}** **__CLEANED__** the submission.`,
+        fields: [
+          {
+            name: 'ID',
+            value: submission.id
+          },
+          {
+            name: 'Source',
+            value: submission.links.source
+          },
+          {
+            name: 'Author',
+            value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
+          }
+        ],
+        color: config.colours().log.info
+      },
+      ctx: submission
+    })
   }
 }
