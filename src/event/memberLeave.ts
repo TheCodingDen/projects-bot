@@ -7,6 +7,7 @@ import {
   updateSubmissionState
 } from '../db/submission'
 import { runCatching } from '../utils/request'
+import { stringify } from '../utils/stringify'
 
 export async function handleMemberLeaveEvent (
   member: GuildMember | PartialGuildMember
@@ -14,6 +15,15 @@ export async function handleMemberLeaveEvent (
   const submissions = await fetchSubmissionsByMemberId(member.id)
 
   for (const submission of submissions) {
+    // When we migrated old data into the project, we had to use FAKEID[{cuid}] for snowflake values, as they were unknown
+    // This means we must handle this case when members who previously submitted projects leave the guild
+    // This should never happen as `fetchSubmissionsByMemberId` will filter out ACCEPTED | DENIED submissions
+    // But we would rather check it, for sanity
+    if (submission.id.startsWith('FAKEID')) {
+      logger.info(`Not attempting to reject migrated submission ${stringify.submission(submission)} (guild member left)`)
+      continue
+    }
+
     const { reviewThreadId, submissionMessageId } =
       await fetchDiscordIdsForSubmission(submission)
 
