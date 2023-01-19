@@ -73,12 +73,11 @@ export default class CleanupCommand extends SlashCommand {
       await updateSubmissionState(submission, 'DENIED')
     }
 
-    const errored = runCatching(async () => {
+    const deletionResult = await runCatching(async () => {
       if (isValidated(submission)) {
         await submission.reviewThread.setArchived(true)
         await submission.submissionMessage.delete()
       }
-    }, 'suppress') !== undefined
 
       return 'not-delete'
     }, 'suppress')
