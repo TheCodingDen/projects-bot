@@ -1,5 +1,5 @@
 import assert from 'assert'
-import { EmbedField, GuildMember, Message } from 'discord.js'
+import { APIEmbedField, EmbedField, GuildMember, Message } from 'discord.js'
 import { client } from '..'
 import { privateLog } from '../communication/private'
 import config from '../config'
@@ -94,18 +94,7 @@ export async function pause (
       title: submission.name,
       description: `**${vote.voter.user.tag}** **__PAUSED__** the submission for voting.`,
       fields: [
-        {
-          name: 'ID',
-          value: submission.id
-        },
-        {
-          name: 'Source',
-          value: submission.links.source
-        },
-        {
-          name: 'Author',
-          value: `<@${submission.authorId}> (${submission.authorId})`
-        }
+        ...generateDefaultFields(submission, false)
       ],
       color: config.colours().log.pause
     },
@@ -141,18 +130,7 @@ export async function unpause (
       title: submission.name,
       description: `**${vote.voter.user.tag}** **__UNPAUSED__** the submission for voting.`,
       fields: [
-        {
-          name: 'ID',
-          value: submission.id
-        },
-        {
-          name: 'Source',
-          value: submission.links.source
-        },
-        {
-          name: 'Author',
-          value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
-        }
+        ...generateDefaultFields(submission, false)
       ],
       color: config.colours().log.pause
     },
@@ -199,18 +177,7 @@ export async function accept (
       title: submission.name,
       description: `**${vote.voter.user.tag}** **__ACCEPTED__** the submission.`,
       fields: [
-        {
-          name: 'ID',
-          value: submission.id
-        },
-        {
-          name: 'Source',
-          value: submission.links.source
-        },
-        {
-          name: 'Author',
-          value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
-        },
+        ...generateDefaultFields(submission),
         ...generateVoteFields(submission.votes)
       ],
       color: config.colours().log.accepted
@@ -295,18 +262,7 @@ ${draft.content}
       title: submission.name,
       description: `**${vote.voter.user.tag}** **__REJECTED__** the submission.`,
       fields: [
-        {
-          name: 'ID',
-          value: submission.id
-        },
-        {
-          name: 'Source',
-          value: submission.links.source
-        },
-        {
-          name: 'Author',
-          value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
-        },
+        ...generateDefaultFields(submission),
         ...generateVoteFields(submission.votes)
       ],
       color: config.colours().log.denied
@@ -480,4 +436,32 @@ function generateVoteFields (votes: Vote[]): [EmbedField, EmbedField] {
       inline: true
     }
   ]
+}
+
+function generateDefaultFields (submission: ValidatedSubmission, includeThreads: boolean = true): APIEmbedField[] {
+  const feedbackThread = submission.feedbackThread !== undefined ? `<#${submission.feedbackThread.id}>` : '<None>'
+
+  const fields = [
+    {
+      name: 'ID',
+      value: submission.id
+    },
+    {
+      name: 'Source',
+      value: submission.links.source
+    },
+    {
+      name: 'Author',
+      value: `<@${submission.authorId}> (${submission.authorId})`
+    }
+  ]
+
+  if (includeThreads) {
+    fields.push({
+      name: 'Threads',
+      value: `Review: <#${submission.reviewThread.id}> | Feedback: ${feedbackThread}`
+    })
+  }
+
+  return fields
 }
