@@ -1,11 +1,11 @@
 import assert from 'assert'
 import { SlashCommand, SlashCreator, CommandContext, CommandOptionType } from 'slash-create'
 import { commandLog } from '../communication/interaction'
+import { internalLog } from '../communication/internal'
 import { privateLog } from '../communication/private'
 import config from '../config'
-import { updateSubmissionState } from '../db/submission'
-import { isPending } from '../types/submission'
-import { fetchSubmissionForContext } from '../utils/commands'
+import { fetchAnySubmissionByThreadId, updateSubmissionState } from '../db/submission'
+import { isCompleted, isValidated } from '../types/submission'
 import { getAssignedGuilds } from '../utils/discordUtils'
 import { runCatching } from '../utils/request'
 
@@ -37,29 +37,47 @@ export default class CleanupCommand extends SlashCommand {
     // This would be a Discord API failure
     assert(!!state, 'no state set')
 
-    const submission = await fetchSubmissionForContext(ctx)
+    const id = ctx.channelID
 
-    if (!submission) {
-      return
-    }
-
-    if (isPending(submission)) {
-      return commandLog.warning({
+    if (!id) {
+      return void commandLog.error({
         type: 'text',
-        content: 'Cannot cleanup pending submissions, use revalidate first.',
+        content: 'Interaction came with no thread ID.',
         ctx
       })
     }
 
-    if (state === 'accepted') {
+    const submission = await fetchAnySubmissionByThreadId(id)
+
+    if (!submission) {
+      commandLog.error({
+        type: 'text',
+        content: `Could not look up submission for channel ID ${id}`,
+        ctx
+      })
+
+      return void internalLog.error({
+        type: 'text',
+        content: `Could not look up submission for channel ID ${id}`,
+        ctx: undefined
+      })
+    }
+
+    if (!submission || submission.state === 'RAW') {
+      return
+    }
+
+    if (state === 'accepted' && !isCompleted(submission)) {
       await updateSubmissionState(submission, 'ACCEPTED')
-    } else {
+    } else if (state === 'denied' && !isCompleted(submission)) {
       await updateSubmissionState(submission, 'DENIED')
     }
 
     const errored = runCatching(async () => {
-      await submission.reviewThread.setArchived(true)
-      await submission.submissionMessage.delete()
+      if (isValidated(submission)) {
+        await submission.reviewThread.setArchived(true)
+        await submission.submissionMessage.delete()
+      }
     }, 'suppress') !== undefined
 
     if (errored) {
@@ -86,7 +104,7 @@ export default class CleanupCommand extends SlashCommand {
           },
           {
             name: 'Author',
-            value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.author.id})`
+            value: `<@${submission.authorId}> (${isValidated(submission) ? submission.author.user.tag : 'Unknown#0000'}, ${submission.authorId})`
           }
         ],
         color: config.colours().log.info

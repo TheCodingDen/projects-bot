@@ -9,6 +9,7 @@ import config from '../config'
 import { Draft } from '../types/draft'
 import { Cuid } from '../types/misc'
 import {
+  AnySubmission,
   ApiSubmission,
   CompletedSubmission,
   PendingSubmission,
@@ -23,6 +24,26 @@ import { query } from './client'
 export async function fetchSubmissionByThreadId (
   id: Snowflake
 ): Promise<ValidatedSubmission | PendingSubmission | undefined> {
+  const submission = await fetchAnySubmissionByThreadId(id)
+
+  if (!submission) {
+    return undefined
+  }
+
+  // Not raw
+  assert(submission.state !== 'RAW', 'submission was in raw state')
+
+  // Not completed
+  assert(submission.state !== 'ACCEPTED', 'submission was in accepted state')
+  assert(submission.state !== 'DENIED', 'submission was in denied state')
+
+  // TS cannot infer the state, but we have asserted above
+  return submission as ValidatedSubmission | PendingSubmission
+}
+
+export async function fetchAnySubmissionByThreadId (
+  id: Snowflake
+): Promise<AnySubmission | undefined> {
   const data = await query((db) =>
     db.submission.findUnique({
       where: {
@@ -66,8 +87,8 @@ export async function fetchSubmissionByThreadId (
 export async function fetchSubmissionsByMemberId (
   id: Snowflake
 ): Promise<PendingSubmission[]> {
-  const data = await query((db) =>
-    db.submission.findMany({
+  const data = await query(async (db) =>
+    await db.submission.findMany({
       where: {
         authorId: id
       },
@@ -174,7 +195,11 @@ export async function fetchSubmissionByMessageId (
     return completed
   }
 
-  return await resolvePrismaData(data)
+  const submission = await resolvePrismaData(data)
+
+  assert(submission.state !== 'RAW', 'submission was in a raw state')
+
+  return submission
 }
 
 type PrismaData = PrismaSubmission & {
@@ -278,17 +303,8 @@ async function fetchOriginalMessage (messageId: Snowflake): Promise<Message> {
 
 async function resolvePrismaData (
   data: PrismaData
-): Promise<ValidatedSubmission> {
+): Promise<AnySubmission> {
   logger.debug(`Beginning resolution of prisma data for submission ${data.id}`)
-
-  logger.trace('Checking states')
-  // These states are invalid for a ValidatedSubmission
-  assert(data.state !== 'RAW', 'submission was in raw state')
-  assert(data.state !== 'ACCEPTED', 'submission was in accepted state')
-  assert(data.state !== 'DENIED', 'submission was in denied state')
-  assert(data.state !== 'WARNING', 'submission was in warning state')
-  assert(data.state !== 'ERROR', 'submission was in error state')
-  logger.trace('States ok')
 
   logger.trace('Asserting required DB columns exist')
   // Assert the data required for a 'processing' or 'paused' state submission exists
@@ -296,39 +312,57 @@ async function resolvePrismaData (
   assert(!!data.messageId, 'message id did not exist')
   logger.trace('Data exists')
 
-  logger.debug('Making API requests to fetch required data')
-  // Fetch all required data to form a ValidatedSubmission
-  const author = await fetchAuthor(data.authorId)
-  const reviewThread = await fetchReviewThread(data.reviewThreadId)
-  const submissionMessage = await fetchOriginalMessage(data.messageId)
+  logger.trace('Resolving votes')
   let feedbackThread
   if (data.feedbackThreadId) {
     feedbackThread = await fetchFeedbackThread(data.feedbackThreadId)
   }
 
+  if (data.state === 'PROCESSING' || data.state === 'PAUSED') {
+    // Fetch all required data to form a ValidatedSubmission
+    logger.debug('Making API requests to fetch required data')
+
+    const author = await fetchAuthor(data.authorId)
+    const reviewThread = await fetchReviewThread(data.reviewThreadId)
+    const submissionMessage = await fetchOriginalMessage(data.messageId)
+
+    // Fetch the vote data
+    const votes = await fetchVotes(data.votes)
+    const drafts = await fetchDrafts(data.drafts)
+
+    const submission: AnySubmission = {
+      ...data,
+      state: data.state,
+
+      reviewThread,
+      feedbackThread,
+      submissionMessage,
+      author,
+      tech: data.techUsed,
+      links: {
+        other: data.otherLinks,
+        source: data.sourceLinks
+      },
+
+      votes,
+      drafts
+    }
+
+    return submission
+  }
+
   logger.trace('API requests successful')
 
-  logger.trace('Resolving votes')
-  // Fetch the vote data
-  const votes = await fetchVotes(data.votes)
-  const drafts = await fetchDrafts(data.drafts)
-
-  const submission: ValidatedSubmission = {
+  const submission: AnySubmission = {
     ...data,
     state: data.state,
 
-    reviewThread,
     feedbackThread,
-    submissionMessage,
-    author,
     tech: data.techUsed,
     links: {
       other: data.otherLinks,
       source: data.sourceLinks
-    },
-
-    votes,
-    drafts
+    }
   }
 
   return submission
