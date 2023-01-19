@@ -88,9 +88,14 @@ export async function fetchSubmissionsByMemberId (
   const out: PendingSubmission[] = []
 
   for (const submission of data) {
+    if (submission.state === 'ACCEPTED' || submission.state === 'DENIED') {
+      logger.debug(`Skipping automated rejection of ${submission.state.toLowerCase()} submission ${submission.id}`)
+      continue
+    }
+
     const pending: PendingSubmission = {
       ...submission,
-      // It's going to be an error state anyways
+      // It's going to be an error state anyways, because the user will not resolve.
       state: 'ERROR',
       tech: submission.techUsed,
       links: {
