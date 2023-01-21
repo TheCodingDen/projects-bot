@@ -244,20 +244,18 @@ ${draft.content}
       submission
     )
 
-  await updateSubmissionState(submission, 'DENIED')
+  const filter = (m: Message): boolean => m.channelId === feedbackThread.id
 
-  // Make sure it was sent in the thread, and that it includes the author ID (ie; mention)
-  // This should avoid accidental removal of the sent message if a user sends a message that is not the rejection
-  // But be lenient enough to work with inexact messages
-  const filter = (m: Message): boolean => m.channelId === feedbackThread.id && m.content.includes(submission.authorId)
-
-  await feedbackThread.awaitMessages({ filter, max: 1 })
+  // 10 second timeout
+  await feedbackThread.awaitMessages({ filter, time: 10_000, max: 1 })
 
   await sentMessage.delete()
 
   await submission.reviewThread.setArchived(true)
 
   await submission.submissionMessage.delete()
+
+  await updateSubmissionState(submission, 'DENIED')
 
   privateLog.info({
     type: 'embed',
