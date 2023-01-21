@@ -73,17 +73,31 @@ export default class CleanupCommand extends SlashCommand {
       await updateSubmissionState(submission, 'DENIED')
     }
 
-    const errored = runCatching(async () => {
+    const deletionResult = await runCatching(async () => {
       if (isValidated(submission)) {
         await submission.reviewThread.setArchived(true)
         await submission.submissionMessage.delete()
       }
-    }, 'suppress') !== undefined
 
-    if (errored) {
+      return 'not-delete'
+    }, 'suppress')
+
+    if (deletionResult === undefined) {
       return commandLog.error({
         type: 'text',
         content: 'Failed to cleanup, Discord API error occurred',
+        ctx
+      })
+    } else if (deletionResult === 'deleted') {
+      commandLog.error({
+        type: 'text',
+        content: 'Cleaned up message & channel',
+        ctx
+      })
+    } else {
+      commandLog.error({
+        type: 'text',
+        content: 'Could not cleanup, channel / message unavailable, please delete manually.',
         ctx
       })
     }
