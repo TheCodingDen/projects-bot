@@ -141,6 +141,9 @@ function createProcessingEmbed (submission: ValidatedSubmission): APIEmbed {
     .map((v) => `${v.voter.user.tag}`)
     .join('\n') || 'None'
 
+  const [,user, repo] = new URL(submission.links.source).pathname.split('/')
+  const vscDevURL = `https://vscode.dev/github/${user}/${repo}`
+
   return createEmbedBase(submission)
     .setFields(
       {
@@ -149,7 +152,7 @@ function createProcessingEmbed (submission: ValidatedSubmission): APIEmbed {
       },
       {
         name: 'Source',
-        value: submission.links.source
+        value: `${createClickableURLString(submission.links.source)} | [Open in vscode.dev](${vscDevURL})`
       },
       {
         name: 'Technologies',
