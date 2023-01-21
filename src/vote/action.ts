@@ -246,7 +246,10 @@ ${draft.content}
 
   await updateSubmissionState(submission, 'DENIED')
 
-  const filter = (m: Message): boolean => m.channelId === feedbackThread.id && m.content.includes(rejectionMessage)
+  // Make sure it was sent in the thread, and that it includes the author ID (ie; mention)
+  // This should avoid accidental removal of the sent message if a user sends a message that is not the rejection
+  // But be lenient enough to work with inexact messages
+  const filter = (m: Message): boolean => m.channelId === feedbackThread.id && m.content.includes(submission.authorId)
 
   await feedbackThread.awaitMessages({ filter, max: 1 })
 
