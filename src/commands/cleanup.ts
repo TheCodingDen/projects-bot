@@ -77,6 +77,8 @@ export default class CleanupCommand extends SlashCommand {
       if (isValidated(submission)) {
         await submission.reviewThread.setArchived(true)
         await submission.submissionMessage.delete()
+
+        return 'deleted'
       }
 
       return 'not-delete'
