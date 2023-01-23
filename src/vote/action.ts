@@ -249,6 +249,8 @@ ${draft.content}
   // 10 second timeout
   await feedbackThread.awaitMessages({ filter, time: 10_000, max: 1 })
 
+  submission.feedbackThread = feedbackThread
+
   await sentMessage.delete()
 
   await submission.reviewThread.setArchived(true)
