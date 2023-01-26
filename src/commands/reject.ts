@@ -76,7 +76,7 @@ export default class RejectCommand extends SlashCommand {
     logger.debug(
       `Starting instant rejection for submission ${stringify.submission(
         submission
-      )} (reason: ${logOutput})`
+      )} (reason: ${logOutput} / ${rawReason})`
     )
 
     // This means Discord gave us a reason that wasnt in the object,

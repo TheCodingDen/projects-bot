@@ -141,7 +141,7 @@ async function handleResolutionFailure (
   reviewThread: ThreadChannel,
   failureReason: string
 ): Promise<ApiError> {
-  logger.error(
+  logger.warn(
         `Failed to fetch required values for submission ${stringify.submission(
           submission
         )} with reason ${failureReason}`

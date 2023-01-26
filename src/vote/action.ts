@@ -301,6 +301,8 @@ export async function forceReject (
     'attempted to force-reject an PAUSED state submission'
   )
 
+  let shouldRunCleanup
+
   try {
     if (config.rejection().publiclyLogged.includes(details.rawReason)) {
       // We want to publicly log it
@@ -309,6 +311,8 @@ export async function forceReject (
       await runCatching(async () => await publicLogs.send({
         content: details.templatedReason
       }), 'suppress')
+
+      shouldRunCleanup = false
     } else {
       await sendMessageToFeedbackThread(
         {
@@ -316,6 +320,8 @@ export async function forceReject (
         },
         submission
       )
+
+      shouldRunCleanup = true
     }
   } catch (err) {
     return {
@@ -347,6 +353,15 @@ export async function forceReject (
     },
     ctx: submission
   })
+
+  if (!shouldRunCleanup) {
+    // Not an ideal abort from here, but it's the easiest way to go about it.
+    // This is an extreme edge case for the API design to handle.
+    return {
+      error: true,
+      message: 'Did not run cleanup, submission was in an errored state. Please clean up manually.'
+    }
+  }
 
   if (isValidated(submission)) {
     // We can supress these, they arent critical for operation
