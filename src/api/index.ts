@@ -84,7 +84,7 @@ async function sendMessageToPrivateSubmission (submission: ApiSubmission): Promi
   const submissionMessage = await runCatching(
     async () => {
       const { privateSubmissions } = config.channels()
-      await privateSubmissions.send({
+      return await privateSubmissions.send({
         embeds: [embed],
         components: [
           new ActionRowBuilder<ButtonBuilder>().addComponents(
