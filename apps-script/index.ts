@@ -125,7 +125,7 @@ function onSubmit (e: GoogleAppsScript.Events.FormsOnFormSubmit): void {
   const description = responses[2].getResponse()
   const source = responses[3].getResponse()
   const tech = responses[4].getResponse()
-  const other = responses[3].getResponse()
+  const other = responses[5].getResponse()
   const payload = {
     name, authorId, description, tech, links: { source, other }
   }
