@@ -54,10 +54,16 @@ function validateRequest (req: FastifyRequest): ApiAction<ApiSubmission> {
   assert(typeof body === 'object' && !!body, 'body was not an object')
 
   logger.trace('Body was valid')
+
+  // Fastify validated the shape for us
+  const castBody = body as ApiSubmission
+
+  // Default to "None" if no string is provided from the form
+  castBody.links.other = castBody.links.other || 'None'
+
   return {
     error: false,
-    // Fastify validated the shape for us
-    data: body as ApiSubmission
+    data: castBody
   }
 }
 
