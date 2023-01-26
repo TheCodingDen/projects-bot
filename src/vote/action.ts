@@ -293,11 +293,9 @@ export async function forceReject (
   submission: ValidatedSubmission | PendingSubmission,
   details: RejectionDetails
 ): Promise<VoteModificationResult> {
-  // Do not allow errored or paused submissions to be rejected, this should be checked by the caller
-  assert(
-    submission.state !== 'ERROR',
-    'attempted to force-reject an ERROR state submission'
-  )
+  // Do not allow paused submissions to be rejected, this should be checked by the caller
+  // Errored submissions are acceptable because invalid-id cases will be in the error state
+  // This case should be validated by callers
   assert(
     submission.state !== 'PAUSED',
     'attempted to force-reject an PAUSED state submission'

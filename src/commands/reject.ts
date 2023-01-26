@@ -48,7 +48,9 @@ export default class RejectCommand extends SlashCommand {
       return
     }
 
-    if (submission.state === 'ERROR') {
+    // Only allow rejection of errored projects if the reason
+    // is invalid ID, not some other failure.
+    if (submission.state === 'ERROR' && rawReason !== 'invalid-id') {
       commandLog.warning({
         type: 'text',
         content:
