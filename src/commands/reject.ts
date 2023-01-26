@@ -104,6 +104,17 @@ export default class RejectCommand extends SlashCommand {
     })
 
     if (rejectionResult.error) {
+      if (rejectionResult.message === 'didnt-run-cleanup') {
+        return commandLog.info({
+          type: 'text',
+          content: 'Could not cleanup, submission was errored. Please cleanup manually.',
+          ctx,
+          extraOpts: {
+            ephemeral: false
+          }
+        })
+      }
+
       // Could not reject, send template to review thread
       commandLog.info({
         type: 'text',

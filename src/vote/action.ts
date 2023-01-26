@@ -359,7 +359,7 @@ export async function forceReject (
     // This is an extreme edge case for the API design to handle.
     return {
       error: true,
-      message: 'Did not run cleanup, submission was in an errored state. Please clean up manually.'
+      message: 'didnt-run-cleanup'
     }
   }
 
