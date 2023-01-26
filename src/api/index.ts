@@ -64,11 +64,20 @@ function validateRequest (req: FastifyRequest): ApiAction<ApiSubmission> {
 async function sendMessageToPrivateSubmission (submission: ApiSubmission): Promise<ApiAction<Message<boolean>>> {
   // Send embed to private submissions channel
   logger.trace('Sending embed to private submissions channel')
-  const embed = createEmbed(submission)
-  const { privateSubmissions } = config.channels()
+
+  const embed = await runCatching(() => createEmbed(submission), 'suppress')
+
+  if (!embed) {
+    return {
+      error: true,
+      statusCode: 500,
+      message: 'Failed to create embed'
+    }
+  }
 
   const submissionMessage = await runCatching(
-    async () =>
+    async () => {
+      const { privateSubmissions } = config.channels()
       await privateSubmissions.send({
         embeds: [embed],
         components: [
@@ -76,7 +85,8 @@ async function sendMessageToPrivateSubmission (submission: ApiSubmission): Promi
             ...VOTING_BUTTONS
           )
         ]
-      }),
+      })
+    },
     'suppress'
   )
 
