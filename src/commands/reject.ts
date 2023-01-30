@@ -48,7 +48,9 @@ export default class RejectCommand extends SlashCommand {
       return
     }
 
-    if (submission.state === 'ERROR') {
+    // Only allow rejection of errored projects if the reason
+    // is invalid ID, not some other failure.
+    if (submission.state === 'ERROR' && rawReason !== 'invalid-id') {
       commandLog.warning({
         type: 'text',
         content:
@@ -74,7 +76,7 @@ export default class RejectCommand extends SlashCommand {
     logger.debug(
       `Starting instant rejection for submission ${stringify.submission(
         submission
-      )} (reason: ${logOutput})`
+      )} (reason: ${logOutput} / ${rawReason})`
     )
 
     // This means Discord gave us a reason that wasnt in the object,
@@ -102,6 +104,17 @@ export default class RejectCommand extends SlashCommand {
     })
 
     if (rejectionResult.error) {
+      if (rejectionResult.message === 'didnt-run-cleanup') {
+        return commandLog.info({
+          type: 'text',
+          content: 'Could not cleanup, submission was errored. Please cleanup manually.',
+          ctx,
+          extraOpts: {
+            ephemeral: false
+          }
+        })
+      }
+
       // Could not reject, send template to review thread
       commandLog.info({
         type: 'text',

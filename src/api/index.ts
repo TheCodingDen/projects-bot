@@ -54,29 +54,45 @@ function validateRequest (req: FastifyRequest): ApiAction<ApiSubmission> {
   assert(typeof body === 'object' && !!body, 'body was not an object')
 
   logger.trace('Body was valid')
+
+  // Fastify validated the shape for us
+  const castBody = body as ApiSubmission
+
+  // Default to "None" if no string is provided from the form
+  castBody.links.other = castBody.links.other || 'None'
+
   return {
     error: false,
-    // Fastify validated the shape for us
-    data: body as ApiSubmission
+    data: castBody
   }
 }
 
 async function sendMessageToPrivateSubmission (submission: ApiSubmission): Promise<ApiAction<Message<boolean>>> {
   // Send embed to private submissions channel
   logger.trace('Sending embed to private submissions channel')
-  const embed = createEmbed(submission)
-  const { privateSubmissions } = config.channels()
+
+  const embed = await runCatching(() => createEmbed(submission), 'suppress')
+
+  if (!embed) {
+    return {
+      error: true,
+      statusCode: 500,
+      message: 'Failed to create embed'
+    }
+  }
 
   const submissionMessage = await runCatching(
-    async () =>
-      await privateSubmissions.send({
+    async () => {
+      const { privateSubmissions } = config.channels()
+      return await privateSubmissions.send({
         embeds: [embed],
         components: [
           new ActionRowBuilder<ButtonBuilder>().addComponents(
             ...VOTING_BUTTONS
           )
         ]
-      }),
+      })
+    },
     'suppress'
   )
 
@@ -125,7 +141,7 @@ async function handleResolutionFailure (
   reviewThread: ThreadChannel,
   failureReason: string
 ): Promise<ApiError> {
-  logger.error(
+  logger.warn(
         `Failed to fetch required values for submission ${stringify.submission(
           submission
         )} with reason ${failureReason}`

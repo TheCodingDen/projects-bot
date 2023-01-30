@@ -293,15 +293,15 @@ export async function forceReject (
   submission: ValidatedSubmission | PendingSubmission,
   details: RejectionDetails
 ): Promise<VoteModificationResult> {
-  // Do not allow errored or paused submissions to be rejected, this should be checked by the caller
-  assert(
-    submission.state !== 'ERROR',
-    'attempted to force-reject an ERROR state submission'
-  )
+  // Do not allow paused submissions to be rejected, this should be checked by the caller
+  // Errored submissions are acceptable because invalid-id cases will be in the error state
+  // This case should be validated by callers
   assert(
     submission.state !== 'PAUSED',
     'attempted to force-reject an PAUSED state submission'
   )
+
+  let shouldRunCleanup
 
   try {
     if (config.rejection().publiclyLogged.includes(details.rawReason)) {
@@ -311,6 +311,8 @@ export async function forceReject (
       await runCatching(async () => await publicLogs.send({
         content: details.templatedReason
       }), 'suppress')
+
+      shouldRunCleanup = false
     } else {
       await sendMessageToFeedbackThread(
         {
@@ -318,6 +320,8 @@ export async function forceReject (
         },
         submission
       )
+
+      shouldRunCleanup = true
     }
   } catch (err) {
     return {
@@ -349,6 +353,15 @@ export async function forceReject (
     },
     ctx: submission
   })
+
+  if (!shouldRunCleanup) {
+    // Not an ideal abort from here, but it's the easiest way to go about it.
+    // This is an extreme edge case for the API design to handle.
+    return {
+      error: true,
+      message: 'didnt-run-cleanup'
+    }
+  }
 
   if (isValidated(submission)) {
     // We can supress these, they arent critical for operation
