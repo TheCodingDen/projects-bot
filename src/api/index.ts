@@ -176,6 +176,7 @@ async function handleResolutionFailure (
 async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<unknown> {
   const requestValidationResult = validateRequest(req)
   if (requestValidationResult.error) {
+    res.statusCode = requestValidationResult.statusCode
     return requestValidationResult
   }
 
@@ -193,6 +194,7 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
 
   const submissionMessageResult = await sendMessageToPrivateSubmission(submission)
   if (submissionMessageResult.error) {
+    res.statusCode = submissionMessageResult.statusCode
     return submissionMessageResult
   }
 
@@ -202,6 +204,7 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
 
   const reviewThreadResult = await createPrivateReviewThread(submission, submissionMessage)
   if (reviewThreadResult.error) {
+    res.statusCode = reviewThreadResult.statusCode
     return reviewThreadResult
   }
 
@@ -297,7 +300,18 @@ server.post(
   '/submissions',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    return await handleRequest(req, res)
+    try {
+      return await handleRequest(req, res)
+    } catch (err) {
+      res.statusCode = 500
+      logger.error('An unexpected error occurred when executing the request')
+      logger.error(err)
+      return {
+        error: true,
+        statusCode: 500,
+        message: 'An internal error occurred when processing your requsest'
+      }
+    }
   }
 )
 
@@ -305,12 +319,34 @@ server.post(
   '/',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    return await handleRequest(req, res)
+    try {
+      return await handleRequest(req, res)
+    } catch (err) {
+      res.statusCode = 500
+      logger.error('An unexpected error occurred when executing the request')
+      logger.error(err)
+      return {
+        error: true,
+        statusCode: 500,
+        message: 'An internal error occurred when processing your requsest'
+      }
+    }
   }
 )
 
 server.post('/refresh-commands', async (_, res) => {
-  creator.syncCommands()
+  try {
+    creator.syncCommands()
+  } catch (err) {
+    res.statusCode = 500
+    logger.error('An unexpected error occurred when executing the request')
+    logger.error(err)
+    return {
+      error: true,
+      statusCode: 500,
+      message: 'An internal error occurred when processing your requsest'
+    }
+  }
   res.statusCode = 204
 })
 
