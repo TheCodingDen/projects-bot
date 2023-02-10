@@ -173,7 +173,7 @@ async function handleResolutionFailure (
   }
 }
 
-async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<unknown> {
+async function handleSubmission (req: FastifyRequest, res: FastifyReply): Promise<unknown> {
   const requestValidationResult = validateRequest(req)
   if (requestValidationResult.error) {
     res.statusCode = requestValidationResult.statusCode
@@ -194,8 +194,9 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
 
   const submissionMessageResult = await sendMessageToPrivateSubmission(submission)
   if (submissionMessageResult.error) {
-    res.statusCode = submissionMessageResult.statusCode
-    return submissionMessageResult
+    return await res
+      .status(submissionMessageResult.statusCode)
+      .send(submissionMessageResult)
   }
 
   const submissionMessage = submissionMessageResult.data
@@ -204,8 +205,9 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
 
   const reviewThreadResult = await createPrivateReviewThread(submission, submissionMessage)
   if (reviewThreadResult.error) {
-    res.statusCode = reviewThreadResult.statusCode
-    return reviewThreadResult
+    return await res
+      .status(reviewThreadResult.statusCode)
+      .send(reviewThreadResult)
   }
 
   const reviewThread = reviewThreadResult.data
@@ -293,25 +295,33 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
     logger.trace('Updated submission state to PROCESSING')
   }
 
-  res.statusCode = 204
+  return await res.status(204)
+}
+
+async function runRequestHandler<T> (
+  fn: (req: FastifyRequest, res: FastifyReply, ...args: any[]) => T | Promise<T>,
+  req: FastifyRequest,
+  res: FastifyReply
+): Promise<T> {
+  try {
+    return await fn(req, res)
+  } catch (err) {
+    logger.error('An unexpected error occurred when executing the request')
+    logger.error(err)
+
+    return await res.status(500).send({
+      error: true,
+      statusCode: 500,
+      message: 'An internal error occurred when processing your requsest'
+    })
+  }
 }
 
 server.post(
   '/submissions',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    try {
-      return await handleRequest(req, res)
-    } catch (err) {
-      res.statusCode = 500
-      logger.error('An unexpected error occurred when executing the request')
-      logger.error(err)
-      return {
-        error: true,
-        statusCode: 500,
-        message: 'An internal error occurred when processing your requsest'
-      }
-    }
+    return await runRequestHandler(handleSubmission, req, res)
   }
 )
 
@@ -319,35 +329,15 @@ server.post(
   '/',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    try {
-      return await handleRequest(req, res)
-    } catch (err) {
-      res.statusCode = 500
-      logger.error('An unexpected error occurred when executing the request')
-      logger.error(err)
-      return {
-        error: true,
-        statusCode: 500,
-        message: 'An internal error occurred when processing your requsest'
-      }
-    }
+    return await runRequestHandler(handleSubmission, req, res)
   }
 )
 
-server.post('/refresh-commands', async (_, res) => {
-  try {
+server.post('/refresh-commands', async (req, res) => {
+  return await runRequestHandler(async () => {
     creator.syncCommands()
-  } catch (err) {
-    res.statusCode = 500
-    logger.error('An unexpected error occurred when executing the request')
-    logger.error(err)
-    return {
-      error: true,
-      statusCode: 500,
-      message: 'An internal error occurred when processing your requsest'
-    }
-  }
-  res.statusCode = 204
+    return await res.status(204)
+  }, req, res)
 })
 
 export async function setup (): Promise<void> {
