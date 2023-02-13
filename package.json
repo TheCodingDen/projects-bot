@@ -59,7 +59,7 @@
     "@types/koa": "^2.13.4",
     "@types/node": "^18.0.3",
     "@types/ws": "^8.5.3",
-    "@typescript-eslint/eslint-plugin": "^5.30.5",
+    "@typescript-eslint/eslint-plugin": "^5.52.0",
     "@typescript-eslint/parser": "^5.30.5",
     "concurrently": "^7.3.0",
     "eslint": "^8.19.0",
