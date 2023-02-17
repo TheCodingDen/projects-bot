@@ -137,7 +137,6 @@ async function createPrivateReviewThread (submission: ApiSubmission, submissionM
 async function handleResolutionFailure (
   submission: PendingSubmission,
   submissionMessage: Message,
-  res: FastifyReply,
   reviewThread: ThreadChannel,
   failureReason: string
 ): Promise<ApiError> {
@@ -162,9 +161,6 @@ async function handleResolutionFailure (
   await updateReviewThreadId(submission, reviewThread.id)
   await updateSubmissionMessageId(submission, submissionMessage.id)
   logger.trace('Set remaining data (review thread id and submission message id)')
-
-  // Abort here, we will need user intervention to continue
-  res.statusCode = 400
 
   return {
     error: true,
@@ -196,7 +192,7 @@ async function handleSubmission (req: FastifyRequest, res: FastifyReply): Promis
   if (submissionMessageResult.error) {
     return await res
       .status(submissionMessageResult.statusCode)
-      .send(submissionMessageResult)
+      .send(submissionMessageResult.message)
   }
 
   const submissionMessage = submissionMessageResult.data
@@ -207,7 +203,7 @@ async function handleSubmission (req: FastifyRequest, res: FastifyReply): Promis
   if (reviewThreadResult.error) {
     return await res
       .status(reviewThreadResult.statusCode)
-      .send(reviewThreadResult)
+      .send(reviewThreadResult.message)
   }
 
   const reviewThread = reviewThreadResult.data
@@ -227,13 +223,16 @@ async function handleSubmission (req: FastifyRequest, res: FastifyReply): Promis
       state: 'ERROR'
     }
 
-    return await handleResolutionFailure(
+    const result = await handleResolutionFailure(
       pendingSubmission,
       submissionMessage,
-      res,
       reviewThread,
       valuesResult.message
     )
+
+    return await res.status(400).send({
+      message: result.message
+    })
   }
 
   const { author } = valuesResult
@@ -310,8 +309,6 @@ async function runRequestHandler<T> (
     logger.error(err)
 
     return await res.status(500).send({
-      error: true,
-      statusCode: 500,
       message: 'An internal error occurred when processing your requsest'
     })
   }
