@@ -223,7 +223,7 @@ async function handleSubmission (req: FastifyRequest, res: FastifyReply): Promis
       state: 'ERROR'
     }
 
-    const result = await handleResolutionFailure(
+    const { message } = await handleResolutionFailure(
       pendingSubmission,
       submissionMessage,
       reviewThread,
@@ -231,7 +231,7 @@ async function handleSubmission (req: FastifyRequest, res: FastifyReply): Promis
     )
 
     return await res.status(400).send({
-      message: result.message
+      message
     })
   }
 
