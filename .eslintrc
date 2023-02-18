@@ -1,17 +1,17 @@
 {
   "parser": "@typescript-eslint/parser",
   "env": {
-    "es2020": true,
     "node": true,
     "jest": true
+    // "browser": true
   },
   "parserOptions": {
-    "project": "./tsconfig.json",
     "ecmaVersion": "latest",
+    "project": "./tsconfig.json",
     "createDefaultProgram": true, // Required for linting to work even on the test folder
     "ecmaFeatures": {
-      "globalReturn": true,
-      "jsx": true
+      "globalReturn": true
+      // jsx: true
     },
     "sourceType": "module"
   },
