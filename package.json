@@ -21,7 +21,8 @@
     "test:watch": "jest --watch",
     "prepare": "husky install",
     "deploy:form": "clasp push",
-    "heroku-postbuild": "prisma migrate deploy && npm run build:ci"
+    "heroku-postbuild": "prisma migrate deploy && npm run build:ci",
+    "doc": "typedoc --out docs src"
   },
   "repository": {
     "type": "git",
