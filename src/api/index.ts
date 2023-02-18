@@ -137,7 +137,6 @@ async function createPrivateReviewThread (submission: ApiSubmission, submissionM
 async function handleResolutionFailure (
   submission: PendingSubmission,
   submissionMessage: Message,
-  res: FastifyReply,
   reviewThread: ThreadChannel,
   failureReason: string
 ): Promise<ApiError> {
@@ -163,9 +162,6 @@ async function handleResolutionFailure (
   await updateSubmissionMessageId(submission, submissionMessage.id)
   logger.trace('Set remaining data (review thread id and submission message id)')
 
-  // Abort here, we will need user intervention to continue
-  res.statusCode = 400
-
   return {
     error: true,
     statusCode: 400,
@@ -173,9 +169,10 @@ async function handleResolutionFailure (
   }
 }
 
-async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<unknown> {
+async function handleSubmission (req: FastifyRequest, res: FastifyReply): Promise<unknown> {
   const requestValidationResult = validateRequest(req)
   if (requestValidationResult.error) {
+    res.statusCode = requestValidationResult.statusCode
     return requestValidationResult
   }
 
@@ -193,7 +190,9 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
 
   const submissionMessageResult = await sendMessageToPrivateSubmission(submission)
   if (submissionMessageResult.error) {
-    return submissionMessageResult
+    return await res
+      .status(submissionMessageResult.statusCode)
+      .send(submissionMessageResult.message)
   }
 
   const submissionMessage = submissionMessageResult.data
@@ -202,7 +201,9 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
 
   const reviewThreadResult = await createPrivateReviewThread(submission, submissionMessage)
   if (reviewThreadResult.error) {
-    return reviewThreadResult
+    return await res
+      .status(reviewThreadResult.statusCode)
+      .send(reviewThreadResult.message)
   }
 
   const reviewThread = reviewThreadResult.data
@@ -222,13 +223,16 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
       state: 'ERROR'
     }
 
-    return await handleResolutionFailure(
+    const { message } = await handleResolutionFailure(
       pendingSubmission,
       submissionMessage,
-      res,
       reviewThread,
       valuesResult.message
     )
+
+    return await res.status(400).send({
+      message
+    })
   }
 
   const { author } = valuesResult
@@ -290,14 +294,31 @@ async function handleRequest (req: FastifyRequest, res: FastifyReply): Promise<u
     logger.trace('Updated submission state to PROCESSING')
   }
 
-  res.statusCode = 204
+  return await res.status(204)
+}
+
+async function runRequestHandler<T> (
+  fn: (req: FastifyRequest, res: FastifyReply, ...args: any[]) => T | Promise<T>,
+  req: FastifyRequest,
+  res: FastifyReply
+): Promise<T> {
+  try {
+    return await fn(req, res)
+  } catch (err) {
+    logger.error('An unexpected error occurred when executing the request')
+    logger.error(err)
+
+    return await res.status(500).send({
+      message: 'An internal error occurred when processing your requsest'
+    })
+  }
 }
 
 server.post(
   '/submissions',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    return await handleRequest(req, res)
+    return await runRequestHandler(handleSubmission, req, res)
   }
 )
 
@@ -305,13 +326,15 @@ server.post(
   '/',
   { schema: { body: apiSubmissionSchema } },
   async (req, res) => {
-    return await handleRequest(req, res)
+    return await runRequestHandler(handleSubmission, req, res)
   }
 )
 
-server.post('/refresh-commands', async (_, res) => {
-  creator.syncCommands()
-  res.statusCode = 204
+server.post('/refresh-commands', async (req, res) => {
+  return await runRequestHandler(async () => {
+    creator.syncCommands()
+    return await res.status(204)
+  }, req, res)
 })
 
 export async function setup (): Promise<void> {
