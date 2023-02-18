@@ -36,6 +36,11 @@ export async function handleButtonEvent (
       content: `Could not locate submission for message id ${message.id}`,
       ctx: undefined
     })
+    interactionLog.error({
+      type: 'text',
+      content: 'Failed to locate submission message, please report this.',
+      ctx: event
+    })
     return
   }
 
@@ -54,7 +59,7 @@ export async function handleButtonEvent (
     interactionLog.warning({
       type: 'text',
       content:
-        'Sorry, that submission is not available for voting at this time.',
+        'Sorry, that submission is not in a valid state. To attempt revalidation, have a staff member run /revalidate',
       ctx: event
     })
     return
