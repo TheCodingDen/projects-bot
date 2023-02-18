@@ -294,7 +294,7 @@ async function handleSubmission (req: FastifyRequest, res: FastifyReply): Promis
     logger.trace('Updated submission state to PROCESSING')
   }
 
-  return await res.status(204)
+  return await res.status(204).send()
 }
 
 async function runRequestHandler<T> (
@@ -333,7 +333,7 @@ server.post(
 server.post('/refresh-commands', async (req, res) => {
   return await runRequestHandler(async () => {
     creator.syncCommands()
-    return await res.status(204)
+    return await res.status(204).send()
   }, req, res)
 })
 
