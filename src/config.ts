@@ -3,6 +3,95 @@ import * as env from './utils/env'
 // User mention and submission name
 interface RejectionParams { user: string, name: string }
 
+type LogLocation = 'public' | 'thread' | 'none'
+
+export interface RejectionTemplate {
+  // The unique key used to identify the template
+  key: string
+
+  // The value sent to Discord for the enumeration
+  // 'value' should be identical to 'key'
+  enumValue: { name: string, value: string }
+
+  // The pretty value, for logging
+  prettyValue: string
+
+  // The templating function to create the rejection message
+  execute: (params: RejectionParams) => string
+
+  // The function to decide where to send the log
+  location: () => LogLocation
+}
+
+const rejectionValues: RejectionTemplate[] = [
+  {
+    key: 'no-license',
+    enumValue: { name: 'No license', value: 'no-license' },
+    prettyValue: 'No license',
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and then resubmit. See <https://choosealicense.com/> for more information`,
+    location: () => 'thread'
+  },
+  {
+    key: 'invalid-license',
+    enumValue: { name: 'Invalid license (Non OSI / not immediately visible)', value: 'invalid-license' },
+    prettyValue: 'Invalid license',
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because it contains a non-OSI license or the license is not immediately visible in the root of the project. Please use an OSI license in a file called LICENSE, LICENSE.txt or LICENSE.md and resubmit. See <https://choosealicense.com/> for more information.`,
+    location: () => 'thread'
+  },
+  {
+    key: 'inaccessable-repository',
+    enumValue: { name: 'Inaccessable repository', value: 'inaccessable-repository' },
+    prettyValue: 'Inaccessable repository',
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository link could not be accessed. Please double check the URL, privacy settings and account information, then resubmit.`,
+    location: () => 'thread'
+  },
+  {
+    key: 'empty-repository',
+    enumValue: { name: 'Empty repository', value: 'empty-repository' },
+    prettyValue: 'Empty repository',
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository was empty. Please double check the URL and account information, then resubmit.`,
+    location: () => 'thread'
+  },
+  {
+    key: 'invalid-repository',
+    enumValue: { name: 'Invalid link (Not GitHub or GitLab)', value: 'invalid-repository' },
+    prettyValue: 'Invalid repository',
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided link did not point to a valid GitHub or GitLab repository. Please double check the URL and account information, then resubmit`,
+    location: () => 'thread'
+  },
+  {
+    key: 'invalid-id',
+    enumValue: { name: 'Invalid user ID', value: 'invalid-id' },
+    prettyValue: 'Invalid user ID',
+    execute: ({ name }: RejectionParams) => `To whomever submitted "${name}", the provided ID was invalid. Please provide us with your ID so we can process your submission. For help with getting your ID, see <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`,
+    location: () => 'public'
+  },
+  {
+    key: 'plagiarism',
+    enumValue: { name: 'Plagiarism', value: 'plagiarism' },
+    prettyValue: 'Plagiarism',
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is blatant plagiarism. Do not resubmit and do not submit plagiarised projects again.`,
+    location: () => 'thread'
+  },
+  {
+    key: 'ad',
+    enumValue: { name: 'Advertisement', value: 'ad' },
+    prettyValue: 'Advertisement',
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is an advertisement to another service / platform. This goes against our policy on advertisements <https://docs.thecodingden.net/community-policy-center/rules#ads>. Do not resubmit this project.`,
+    location: () => 'thread'
+  },
+  {
+    key: 'resubmission',
+    enumValue: { name: 'Resubmission', value: 'resubmission' },
+    prettyValue: 'Resubmission',
+    // Should not be called, this should not be logged
+    execute: (_: RejectionParams) => {
+      throw new Error('Uncallable')
+    },
+    location: () => 'none'
+  }
+]
+
 const config = {
   /**
    * Config for the forceful rejection feature.
@@ -11,46 +100,13 @@ const config = {
     /**
      * The enum values to use in the /reject slash command.
      */
-    enumValues: [
-      { name: 'No license', value: 'no-license' },
-      { name: 'Invalid license (Non OSI / not immediately visible)', value: 'invalid-license' },
-      { name: 'Inaccessable repository', value: 'inaccessable-repository' },
-      { name: 'Empty repository', value: 'empty-repository' },
-      { name: 'Invalid link (Not GitHub or GitLab)', value: 'invalid-repository' },
-      { name: 'Invalid user ID', value: 'invalid-id' },
-      { name: 'Plagiarism', value: 'plagiarism' },
-      { name: 'Advertisement', value: 'ad' }
-    ],
+    enumValues: rejectionValues.map(rej => rej.enumValue),
+
     /**
-     * The rejection reasons that are logged in the public logs rather than in a private review thread.
+     * Utility to lookup a template by its `key`
      */
-    publiclyLogged: ['invalid-id'],
-    /**
-     * The lookup table to go from enum keys to log friendly outputs.
-     */
-    logLookup: {
-      'no-license': 'No license',
-      'invalid-license': 'Invalid license',
-      'inaccessable-repository': 'Inaccessable repository',
-      'empty-repository': 'Empty repository',
-      'invalid-repository': 'Invalid repository',
-      'invalid-id': 'Invalid user ID',
-      plagiarism: 'Plagiarism',
-      ad: 'Advertisement'
-    },
-    /**
-     * The lookup table to go from enum keys to rejection reason templates.
-     * This is used in the feedback thread.
-     */
-    templates: {
-      'no-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and then resubmit. See <https://choosealicense.com/> for more information`,
-      'invalid-license': ({ user }: RejectionParams) => `${user}, your project has been rejected because it contains a non-OSI license or the license is not immediately visible in the root of the project. Please use an OSI license in a file called LICENSE, LICENSE.txt or LICENSE.md and resubmit. See <https://choosealicense.com/> for more information.`,
-      'inaccessable-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository link could not be accessed. Please double check the URL, privacy settings and account information, then resubmit.`,
-      'empty-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided repository was empty. Please double check the URL and account information, then resubmit.`,
-      'invalid-repository': ({ user }: RejectionParams) => `${user}, your project has been rejected because the provided link did not point to a valid GitHub or GitLab repository. Please double check the URL and account information, then resubmit`,
-      'invalid-id': ({ name }: RejectionParams) => `To whomever submitted "${name}", the provided ID was invalid. Please provide us with your ID so we can process your submission. For help with getting your ID, see <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`,
-      plagiarism: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is blatant plagiarism. Do not resubmit and do not submit plagiarised projects again.`,
-      ad: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is an advertisement to another service / platform. This goes against our policy on advertisements <https://docs.thecodingden.net/community-policy-center/rules#ads>. Do not resubmit this project.`
+    lookupByKey: (key: string) => {
+      return rejectionValues.find(rej => rej.key === key)
     }
   }),
   /**
