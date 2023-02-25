@@ -29,7 +29,12 @@ export const stringify = {
       return `Submission(${submission.state}) { ${base} (id: ${submission.id}) (submissionMessageId: ${submission.submissionMessage.id}) (reviewThreadId: ${submission.reviewThread.id}) }`
     } else if (isPending(submission)) {
       // PendingSubmission
-      return `Submission(${submission.state}) { ${base} }`
+
+      // Don't log "ERROR" because coralogix will interpret this as an actual error log
+      // and dispatch an alert etc.
+      const loggedState = submission.state === 'ERROR' ? 'INVALID' : 'WARNING'
+
+      return `Submission(${loggedState}) { ${base} }`
     } else if (
       submission.state === 'ACCEPTED' ||
       submission.state === 'DENIED'
