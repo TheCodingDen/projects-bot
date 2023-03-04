@@ -32,6 +32,9 @@ export const stringify = {
 
       // Don't log "ERROR" because coralogix will interpret this as an actual error log
       // and dispatch an alert etc.
+
+      // FIXME: Revert this to log the state directly once we can disable the matcher, which Modmail depends on
+      // SEE: https://github.com/kyb3r/modmail/issues/3246
       const loggedState = submission.state === 'ERROR' ? 'INVALID' : 'WARNING'
 
       return `Submission(${loggedState}) { ${base} }`
