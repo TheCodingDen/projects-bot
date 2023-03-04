@@ -12,8 +12,7 @@ import {
   downvote,
   pause,
   unpause,
-  upvote,
-  voteRejectsSubmission
+  upvote
 } from './action'
 import { VoteModificationResult } from './result'
 
@@ -151,12 +150,11 @@ export async function handleButtonEvent (
 
   if (
     type === 'DOWNVOTE' &&
-    voteRejectsSubmission(vote, submission) &&
     !hasDraft
   ) {
     interactionLog.error({
       type: 'text',
-      content: 'Cannot reject without a draft set',
+      content: 'Cannot downvote without a draft set',
       ctx: event
     })
     return
