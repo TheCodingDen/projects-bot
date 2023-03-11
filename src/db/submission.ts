@@ -76,10 +76,12 @@ export async function fetchAnySubmissionByThreadId (
     resolvedSubmission = await resolvePrismaData(data)
     didResolve = true
   } catch (err) {
+    assert(err instanceof Error, 'impossible')
+
     didResolve = false
     internalLog.error({
       type: 'text',
-      content: `Data resolution failed for submission ${data.id} \n ${err}`,
+      content: `Data resolution failed for submission ${data.id} \n ${err.message} \n ${err.stack}`,
       ctx: undefined
     })
   }
