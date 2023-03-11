@@ -5,6 +5,7 @@ import {
 } from '@prisma/client'
 import assert from 'assert'
 import { GuildMember, Message, Snowflake, ThreadChannel } from 'discord.js'
+import { internalLog } from '../communication/internal'
 import config from '../config'
 import { Draft } from '../types/draft'
 import { Cuid } from '../types/misc'
@@ -64,11 +65,42 @@ export async function fetchAnySubmissionByThreadId (
     return undefined
   }
 
-  if (data.state === 'ERROR' || data.state === 'WARNING') {
+  let resolvedSubmission
+  let didResolve
+
+  // Allow resolution to fail. This may happen if there is a data desync.
+  // As a result, this has to be fallible to allow resyncing.
+  // This is used by the cleanup command to resolve submissions that are broken
+  // but not in an errored state, such as a member without us getting the gateway event.
+  try {
+    resolvedSubmission = await resolvePrismaData(data)
+    didResolve = true
+  } catch (err) {
+    assert(err instanceof Error, 'impossible')
+
+    didResolve = false
+    internalLog.error({
+      type: 'text',
+      content: `Data resolution failed for submission ${data.id} \n ${err.message} \n ${err.stack}`,
+      ctx: undefined
+    })
+  }
+
+  if (data.state === 'ERROR' || data.state === 'WARNING' || !didResolve) {
     // It's a pending submission
+    let state: SubmissionState
+
+    if (!didResolve) {
+      state = 'ERROR'
+    } else if (data.state === 'ERROR' || data.state === 'WARNING') {
+      state = data.state
+    } else {
+      assert(false, 'unreachable')
+    }
+
     const pending: PendingSubmission = {
       ...data,
-      state: data.state,
+      state,
       tech: data.techUsed,
       links: {
         source: data.sourceLinks,
@@ -81,7 +113,7 @@ export async function fetchAnySubmissionByThreadId (
     return pending
   }
 
-  return await resolvePrismaData(data)
+  return resolvedSubmission
 }
 
 export async function fetchSubmissionsByMemberId (
