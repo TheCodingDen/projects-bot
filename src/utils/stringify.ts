@@ -29,7 +29,15 @@ export const stringify = {
       return `Submission(${submission.state}) { ${base} (id: ${submission.id}) (submissionMessageId: ${submission.submissionMessage.id}) (reviewThreadId: ${submission.reviewThread.id}) }`
     } else if (isPending(submission)) {
       // PendingSubmission
-      return `Submission(${submission.state}) { ${base} }`
+
+      // Don't log "ERROR" because coralogix will interpret this as an actual error log
+      // and dispatch an alert etc.
+
+      // FIXME: Revert this to log the state directly once we can disable the matcher, which Modmail depends on
+      // SEE: https://github.com/kyb3r/modmail/issues/3246
+      const loggedState = submission.state === 'ERROR' ? 'INVALID' : 'WARNING'
+
+      return `Submission(${loggedState}) { ${base} }`
     } else if (
       submission.state === 'ACCEPTED' ||
       submission.state === 'DENIED'
