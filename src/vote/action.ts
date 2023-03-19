@@ -2,7 +2,7 @@ import assert from 'assert'
 import { APIEmbedField, EmbedField, GuildMember, Message } from 'discord.js'
 import { client } from '..'
 import { privateLog } from '../communication/private'
-import config from '../config'
+import config, { RejectionTemplate } from '../config'
 import {
   updateSubmissionState,
   validatePendingSubmission
@@ -93,9 +93,7 @@ export async function pause (
     embed: {
       title: submission.name,
       description: `**${vote.voter.user.tag}** **__PAUSED__** the submission for voting.`,
-      fields: [
-        ...generateDefaultFields(submission, false)
-      ],
+      fields: [...generateDefaultFields(submission, false)],
       color: config.colours().log.pause
     },
     ctx: submission
@@ -129,9 +127,7 @@ export async function unpause (
     embed: {
       title: submission.name,
       description: `**${vote.voter.user.tag}** **__UNPAUSED__** the submission for voting.`,
-      fields: [
-        ...generateDefaultFields(submission, false)
-      ],
+      fields: [...generateDefaultFields(submission, false)],
       color: config.colours().log.pause
     },
     ctx: submission
@@ -279,11 +275,6 @@ ${draft.content}
   }
 }
 
-interface RejectionDetails {
-  templatedReason: string
-  rawReason: string
-}
-
 /**
  * Forcefully reject a submission, this will run cleanup for the submission.
  */
@@ -291,7 +282,7 @@ export async function forceReject (
   voter: GuildMember,
   // Could be in the pending state, we will just ignore warnings if that is the case
   submission: ValidatedSubmission | PendingSubmission,
-  details: RejectionDetails
+  template: RejectionTemplate
 ): Promise<VoteModificationResult> {
   // Do not allow paused submissions to be rejected, this should be checked by the caller
   // Errored submissions are acceptable because invalid-id cases will be in the error state
@@ -302,25 +293,40 @@ export async function forceReject (
   )
 
   let shouldRunCleanup
+  const logLocation = template.location()
 
   try {
-    if (config.rejection().publiclyLogged.includes(details.rawReason)) {
+    if (logLocation === 'public') {
       // We want to publicly log it
 
       const { publicLogs } = config.channels()
-      await runCatching(async () => await publicLogs.send({
-        content: details.templatedReason
-      }), 'suppress')
+      const templatedReason = template.execute({
+        user: `<@${submission.authorId}>`,
+        name: submission.name
+      })
+      await runCatching(
+        async () =>
+          await publicLogs.send({
+            content: templatedReason
+          }),
+        'suppress'
+      )
 
       shouldRunCleanup = false
-    } else {
+    } else if (logLocation === 'thread') {
+      const templatedReason = template.execute({
+        user: `<@${submission.authorId}>`,
+        name: submission.name
+      })
       await sendMessageToFeedbackThread(
         {
-          content: details.templatedReason
+          content: templatedReason
         },
         submission
       )
 
+      shouldRunCleanup = true
+    } else {
       shouldRunCleanup = true
     }
   } catch (err) {
@@ -454,8 +460,14 @@ function generateVoteFields (votes: Vote[]): [EmbedField, EmbedField] {
   ]
 }
 
-function generateDefaultFields (submission: ValidatedSubmission, includeThreads: boolean = true): APIEmbedField[] {
-  const feedbackThread = submission.feedbackThread !== undefined ? `<#${submission.feedbackThread.id}>` : '<None>'
+function generateDefaultFields (
+  submission: ValidatedSubmission,
+  includeThreads: boolean = true
+): APIEmbedField[] {
+  const feedbackThread =
+    submission.feedbackThread !== undefined
+      ? `<#${submission.feedbackThread.id}>`
+      : '<None>'
 
   const fields = [
     {

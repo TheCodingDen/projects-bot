@@ -32,12 +32,23 @@ export default class RejectCommand extends SlashCommand {
   }
 
   async run (ctx: CommandContext): Promise<void> {
-    const { logLookup, templates } = config.rejection()
-    // Discord validates the enum, thus the cast is safe
-    const rawReason = ctx.options.reason as keyof typeof templates
+    const reasonKey = ctx.options.reason
 
     // This would be a Discord API failure
-    assert(!!rawReason, 'no reason set')
+    assert(!!reasonKey, 'no reason set')
+
+    const template = config.rejection().lookupByKey(reasonKey)
+
+    if (!template) {
+      // This should never happen, but we want to be helpful if it does
+      logger.error(`Attempted to reject for unknown reason ${reasonKey}, Discord gave us garbage.`)
+
+      return commandLog.error({
+        type: 'text',
+        content: `Sorry, something went wrong when looking up the rejection key ${reasonKey}. Please report this.`,
+        ctx
+      })
+    }
 
     // Retrieve d.js member
     const member = await config.guilds().current.members.fetch(ctx.user.id)
@@ -50,7 +61,7 @@ export default class RejectCommand extends SlashCommand {
 
     // Only allow rejection of errored projects if the reason
     // is invalid ID, not some other failure.
-    if (submission.state === 'ERROR' && rawReason !== 'invalid-id') {
+    if (submission.state === 'ERROR' && reasonKey !== 'invalid-id') {
       commandLog.warning({
         type: 'text',
         content:
@@ -70,41 +81,25 @@ export default class RejectCommand extends SlashCommand {
       return
     }
 
-    const template = templates[rawReason]
-    const logOutput = logLookup[rawReason]
-
     logger.debug(
       `Starting instant rejection for submission ${stringify.submission(
         submission
-      )} (reason: ${logOutput} / ${rawReason})`
+      )} (reason: ${template.prettyValue} / ${reasonKey})`
     )
-
-    // This means Discord gave us a reason that wasnt in the object,
-    // could be caused by misconfiguration or API failure.
-    assert(!!template, 'template was not set')
-    assert(!!logOutput, 'logOutput was not set')
-
-    const templatedReason = template({
-      user: `<@${submission.authorId}>`,
-      name: submission.name
-    })
 
     commandLog.info({
       type: 'text',
-      content: `Rejecting submission for reason ${logOutput}`,
+      content: `Rejecting submission for reason ${template.prettyValue}`,
       ctx,
       extraOpts: {
         ephemeral: false
       }
     })
 
-    const rejectionResult = await forceReject(member, submission, {
-      templatedReason,
-      rawReason
-    })
+    const rejectionResult = await forceReject(member, submission, template)
 
     if (rejectionResult.error) {
-      if (rejectionResult.message === 'didnt-run-cleanup') {
+      if (rejectionResult.message === 'didnt-run-cleanup' && template.location() === 'thread') {
         return commandLog.info({
           type: 'text',
           content: 'Could not cleanup, submission was errored. Please cleanup manually.',
@@ -114,6 +109,11 @@ export default class RejectCommand extends SlashCommand {
           }
         })
       }
+
+      const templatedReason = template.execute({
+        user: `<@${submission.authorId}>`,
+        name: submission.name
+      })
 
       // Could not reject, send template to review thread
       commandLog.info({
