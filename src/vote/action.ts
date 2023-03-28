@@ -336,25 +336,32 @@ export async function forceReject (
     }
   }
 
+  let fields
+
+  if (isValidated(submission)) {
+    fields = generateDefaultFields(submission, true)
+  } else {
+    fields =
+    [{
+      name: 'ID',
+      value: submission.id
+    },
+    {
+      name: 'Source',
+      value: submission.links.source
+    },
+    {
+      name: 'Author',
+      value: `<@${submission.authorId}> (${submission.authorId})`
+    }]
+  }
+
   privateLog.info({
     type: 'embed',
     embed: {
       title: submission.name,
-      description: `**${voter.user.tag}** **__FORCE-REJECTED__** the submission.`,
-      fields: [
-        {
-          name: 'ID',
-          value: submission.id
-        },
-        {
-          name: 'Source',
-          value: submission.links.source
-        },
-        {
-          name: 'Author',
-          value: `<@${submission.authorId}> (${submission.authorId})`
-        }
-      ],
+      description: `**${voter.user.tag}** **__FORCE-REJECTED__** the submission.\n Reason: **${template.prettyValue}**`,
+      fields,
       color: config.colours().log.denied
     },
     ctx: submission
