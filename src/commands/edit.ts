@@ -188,7 +188,7 @@ export default class EditCommand extends SlashCommand {
 
     // Wait for the update to complete
     // Rethrows because if we fail to update, we wont be able to validate below
-    await runCatching(() => updateFn(newValue), 'rethrow')
+    await runCatching(async () => await updateFn(newValue), 'rethrow')
 
     logger.trace('Set successfuly')
 
