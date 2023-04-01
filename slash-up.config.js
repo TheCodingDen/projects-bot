@@ -4,7 +4,7 @@ module.exports = {
   commandPath: './src/commands',
   env: {
     development: {
-      globalToGuild: process.env.DEVELOPMENT_GUILD_ID,
+      globalToGuild: process.env.DEVELOPMENT_GUILD_ID
     }
   }
 }
