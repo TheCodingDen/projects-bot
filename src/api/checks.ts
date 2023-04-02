@@ -114,8 +114,8 @@ export async function runNonCriticalChecks (
 async function checkForDuplicate (
   submission: ValidatedSubmission
 ): Promise<boolean> {
-  const count = await query((db) =>
-    db.submission.count({
+  const count = await query(async (db) =>
+    await db.submission.count({
       where: {
         AND: [
           {
