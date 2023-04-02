@@ -81,14 +81,21 @@ const rejectionValues: RejectionTemplate[] = [
     location: () => 'thread'
   },
   {
-    key: 'resubmission',
-    enumValue: { name: 'Resubmission', value: 'resubmission' },
-    prettyValue: 'Resubmission',
+    key: 'silently',
+    enumValue: { name: 'Silently (Will not send a thread message)', value: 'silently' },
+    prettyValue: 'Silently',
     // Should not be called, this should not be logged
     execute: (_: RejectionParams) => {
       throw new Error('Uncallable')
     },
     location: () => 'none'
+  },
+  {
+    key: 'duplicate',
+    enumValue: { name: 'Duplicate submission', value: 'duplicate' },
+    prettyValue: 'Duplicate',
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because it is a duplicate. We will review your original in due course. Please do not submit this project again.`,
+    location: () => 'thread'
   }
 ]
 
