@@ -12,8 +12,6 @@ import {
 import { stringify } from './stringify'
 import { createClickableURLString } from './url'
 
-const DEFAULT_AVATAR_URL = 'https://cdn.discordapp.com/embed/avatars/0.png'
-
 // Discord requires a "value" for an embed, but a zero-width+space suffices
 const ZWS = '​'
 
@@ -73,7 +71,7 @@ function createPublicEmbed (submission: CompletedSubmission): APIEmbed {
     .setTimestamp(new Date())
     .setAuthor({
       name: submission.author.user.tag,
-      iconURL: submission.author.avatarURL() ?? DEFAULT_AVATAR_URL
+      iconURL: submission.author.displayAvatarURL()
     })
     .setFields(
       { name: 'Languages/technologies used', value: submission.tech },
