@@ -138,7 +138,7 @@ export default class EditCommand extends SlashCommand {
         }
         break
       case 'technologies':
-        oldValue = submission.links.other
+        oldValue = submission.tech
         updateFn = async (val: string) => {
           submission.tech = val
           await updateTechnologies(submission, val)
