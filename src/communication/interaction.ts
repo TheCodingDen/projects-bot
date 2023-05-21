@@ -55,8 +55,8 @@ function genericCommandLog (
   void runCatching(
     async () =>
       await options.ctx.send({
-        ...makeSlashMessageOpts(options),
-        ...DEFAULT_MESSAGE_OPTS_SLASH
+        ...DEFAULT_MESSAGE_OPTS_SLASH,
+        ...makeSlashMessageOpts(options)
       }),
     'rethrow'
   )

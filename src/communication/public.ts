@@ -18,8 +18,8 @@ function genericLog (
   void runCatching(
     async () =>
       await config.channels().publicLogs.send({
-        ...makeDjsMessageOpts(options),
-        ...DEFAULT_MESSAGE_OPTS_DJS
+        ...DEFAULT_MESSAGE_OPTS_DJS,
+        ...makeDjsMessageOpts(options)
       }),
     'rethrow'
   )

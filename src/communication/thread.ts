@@ -15,8 +15,8 @@ function doLog (
   void runCatching(
     async () =>
       await options.ctx.send({
-        ...makeDjsMessageOpts(options),
-        ...DEFAULT_MESSAGE_OPTS_DJS
+        ...DEFAULT_MESSAGE_OPTS_DJS,
+        ...makeDjsMessageOpts(options)
       }),
     'rethrow'
   )
