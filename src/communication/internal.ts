@@ -19,8 +19,8 @@ function genericLog (options: InternalLogOptions<BaseMessageOptions, AnySubmissi
   void runCatching(async () =>
 
     await config.channels().internalLogs.send({
-      ...makeDjsMessageOpts(options),
-      ...DEFAULT_MESSAGE_OPTS_DJS
+      ...DEFAULT_MESSAGE_OPTS_DJS,
+      ...makeDjsMessageOpts(options)
     }), 'rethrow'
   )
 }
