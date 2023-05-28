@@ -1,5 +1,5 @@
 import assert from 'assert'
-import { APIEmbedField, EmbedField, GuildMember, Message } from 'discord.js'
+import { APIEmbedField, EmbedField, GuildMember } from 'discord.js'
 import { client } from '..'
 import { privateLog } from '../communication/private'
 import config, { RejectionTemplate } from '../config'
@@ -223,27 +223,17 @@ export async function reject (
     .filter((v) => !v.bot)
     .map((v) => `<@${v.id}>`)
 
-  const rejectionMessage = `
-Reviewers: ${formattedReviewers}
+  const { message: reviewerMessage } = await sendMessageToFeedbackThread({ content: formattedReviewers.join(', ') }, submission)
 
-Send the message below in this thread:
-\`\`\`
-${draft.content}
-\`\`\`
-`
+  await reviewerMessage.delete()
 
   const { message: sentMessage, thread: feedbackThread } =
     await sendMessageToFeedbackThread(
       {
-        content: rejectionMessage
+        content: draft.content
       },
       submission
     )
-
-  const filter = (m: Message): boolean => m.channelId === feedbackThread.id
-
-  // 10 second timeout
-  await feedbackThread.awaitMessages({ filter, time: 10_000, max: 1 })
 
   submission.feedbackThread = feedbackThread
 
