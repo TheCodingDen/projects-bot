@@ -223,21 +223,17 @@ export async function reject (
     .filter((v) => !v.bot)
     .map((v) => `<@${v.id}>`)
 
-  const { message: reviewerMessage } = await sendMessageToFeedbackThread({ content: formattedReviewers.join(', ') }, submission)
+  const { message: reviewerMessage, thread: feedbackThread } = await sendMessageToFeedbackThread({
+    content: formattedReviewers.join(', ')
+  }, submission)
 
   await reviewerMessage.delete()
 
-  const { message: sentMessage, thread: feedbackThread } =
-    await sendMessageToFeedbackThread(
-      {
-        content: draft.content
-      },
-      submission
-    )
+  await feedbackThread.send({
+    content: draft.content
+  })
 
   submission.feedbackThread = feedbackThread
-
-  await sentMessage.delete()
 
   await submission.reviewThread.setArchived(true)
 
