@@ -1,4 +1,5 @@
 import assert from 'assert'
+import { time } from 'discord.js'
 import {
   SlashCommand,
   SlashCreator,
@@ -108,7 +109,7 @@ ${draft.content}
 
 id: ${draft.id}
 author: ${draft.author.user.tag}
-timestamp: ${draft.timestamp.toLocaleString()}
+timestamp: ${time(draft.timestamp, 'f')} (${time(draft.timestamp, 'R')})
       `
     }
 
@@ -285,7 +286,7 @@ ${current.content}
 
 id: ${current.id}
 author: ${current.author.user.tag}
-timestamp: <t:${current.timestamp.getUTCMilliseconds()}:f> (<t:${current.timestamp.getUTCMilliseconds()}:R>)
+timestamp: ${time(current.timestamp, 'f')} (${time(current.timestamp, 'R')})
 `,
       ctx,
       extraOpts: {
