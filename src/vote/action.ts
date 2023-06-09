@@ -440,9 +440,9 @@ function generateVoteFields (votes: Vote[]): [EmbedField, EmbedField] {
   const downvotes = votes.filter((v) => v.type === 'DOWNVOTE')
 
   const upvoteString =
-    upvotes.map((v) => `@${v.voter.user.username}`).join("\n") || "None";
+    upvotes.map((v) => `@${v.voter.user.username}`).join('\n') || 'None'
   const downvoteString =
-    downvotes.map((v) => `@${v.voter.user.username}`).join("\n") || "None";
+    downvotes.map((v) => `@${v.voter.user.username}`).join('\n') || 'None'
 
   return [
     {
