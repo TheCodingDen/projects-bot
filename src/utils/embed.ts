@@ -70,7 +70,7 @@ function createPublicEmbed (submission: CompletedSubmission): APIEmbed {
     .setURL(submission.links.source)
     .setTimestamp(new Date())
     .setAuthor({
-      name: submission.author.user.tag,
+      name: `@${submission.author.user.name}`,
       iconURL: submission.author.displayAvatarURL()
     })
     .setFields(
@@ -131,12 +131,12 @@ function createInitialEmbed (submission: ApiSubmission): APIEmbed {
 function createProcessingEmbed (submission: ValidatedSubmission): APIEmbed {
   const upvotes = submission.votes
     .filter((v) => v.type === 'UPVOTE')
-    .map((v) => `${v.voter.user.tag}`)
+    .map((v) => `@${v.voter.user.name}`)
     .join('\n') || 'None'
 
   const downvotes = submission.votes
     .filter((v) => v.type === 'DOWNVOTE')
-    .map((v) => `${v.voter.user.tag}`)
+    .map((v) => `@${v.voter.user.name}`)
     .join('\n') || 'None'
 
   const [,user, repo] = new URL(submission.links.source).pathname.split('/')
@@ -146,7 +146,7 @@ function createProcessingEmbed (submission: ValidatedSubmission): APIEmbed {
     .setFields(
       {
         name: 'Submitter',
-        value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.authorId})`
+        value: `<@${submission.author.id}> (@${submission.author.user.name}, ${submission.authorId})`
       },
       {
         name: 'Source',

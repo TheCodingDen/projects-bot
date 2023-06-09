@@ -73,7 +73,7 @@ export default class RevalidateCommand extends SlashCommand {
             },
             {
               name: 'Author',
-              value: `<@${validated.author.id}> (${validated.author.user.tag}, ${validated.author.id})`
+              value: `<@${validated.author.id}> (@${validated.author.user.name}, ${validated.author.id})`
             }
           ]
         },

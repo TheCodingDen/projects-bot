@@ -120,7 +120,7 @@ export default class CleanupCommand extends SlashCommand {
           },
           {
             name: 'Author',
-            value: `<@${submission.authorId}> (${isValidated(submission) ? submission.author.user.tag : 'Unknown#0000'}, ${submission.authorId})`
+            value: `<@${submission.authorId}> (${isValidated(submission) ? `@${submission.author.user.name}` : '@unknown-user'}, ${submission.authorId})`
           }
         ],
         color: config.colours().log.info

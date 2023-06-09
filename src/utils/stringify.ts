@@ -62,7 +62,7 @@ export const stringify = {
       return 'User { undefined }'
     }
 
-    return `User { (id: ${user.id}) (tag: ${user.username}#${user.discriminator})}`
+    return `User { (id: ${user.id}) (name: @${user.name}})}`
   },
 
   channel: (channel: GuildBasedChannel | undefined | null): string => {

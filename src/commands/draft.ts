@@ -108,7 +108,7 @@ export default class DraftCommand extends SlashCommand {
 ${draft.content}
 
 id: ${draft.id}
-author: ${draft.author.user.tag}
+author: @${draft.author.user.name}
 timestamp: ${time(draft.timestamp, 'f')} (${time(draft.timestamp, 'R')})
       `
     }
@@ -285,7 +285,7 @@ timestamp: ${time(draft.timestamp, 'f')} (${time(draft.timestamp, 'R')})
 ${current.content}
 
 id: ${current.id}
-author: ${current.author.user.tag}
+author: @${current.author.user.name}
 timestamp: ${time(current.timestamp, 'f')} (${time(current.timestamp, 'R')})
 `,
       ctx,
