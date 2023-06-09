@@ -1,5 +1,5 @@
-import assert from 'assert'
-import { time } from 'discord.js'
+import assert from "assert";
+import { time } from "discord.js";
 import {
   SlashCommand,
   SlashCreator,
@@ -7,100 +7,100 @@ import {
   CommandOptionType,
   ComponentType,
   TextInputStyle,
-  ButtonStyle
-} from 'slash-create'
-import { commandLog } from '../communication/interaction'
-import { createDraft, deleteDraft } from '../db/draft'
-import { Draft } from '../types/draft'
-import { isValidated, ValidatedSubmission } from '../types/submission'
-import { fetchSubmissionForContext } from '../utils/commands'
-import { DEFAULT_MESSAGE_OPTS_SLASH } from '../utils/communication'
-import { getAssignedGuilds } from '../utils/discordUtils'
-import { runCatching } from '../utils/request'
-import { stringify } from '../utils/stringify'
+  ButtonStyle,
+} from "slash-create";
+import { commandLog } from "../communication/interaction";
+import { createDraft, deleteDraft } from "../db/draft";
+import { Draft } from "../types/draft";
+import { isValidated, ValidatedSubmission } from "../types/submission";
+import { fetchSubmissionForContext } from "../utils/commands";
+import { DEFAULT_MESSAGE_OPTS_SLASH } from "../utils/communication";
+import { getAssignedGuilds } from "../utils/discordUtils";
+import { runCatching } from "../utils/request";
+import { stringify } from "../utils/stringify";
 
 export default class DraftCommand extends SlashCommand {
-  constructor (creator: SlashCreator) {
+  constructor(creator: SlashCreator) {
     super(creator, {
-      name: 'draft',
-      description: 'Manages draft rejection messages for a submission',
+      name: "draft",
+      description: "Manages draft rejection messages for a submission",
       guildIDs: getAssignedGuilds({ includeMain: true }),
       options: [
         {
           type: CommandOptionType.SUB_COMMAND,
-          name: 'add',
-          description: 'Updates the current draft for a submission'
+          name: "add",
+          description: "Updates the current draft for a submission",
         },
         {
           type: CommandOptionType.SUB_COMMAND,
-          name: 'clear',
-          description: 'Clears the current draft for a submission'
+          name: "clear",
+          description: "Clears the current draft for a submission",
         },
         {
           type: CommandOptionType.SUB_COMMAND,
-          name: 'view',
-          description: 'Views the current draft for a submission'
+          name: "view",
+          description: "Views the current draft for a submission",
         },
         {
           type: CommandOptionType.SUB_COMMAND,
-          name: 'history',
-          description: 'Views the draft history for a submission'
-        }
-      ]
-    })
+          name: "history",
+          description: "Views the draft history for a submission",
+        },
+      ],
+    });
   }
 
-  async run (ctx: CommandContext): Promise<void> {
-    const submission = await fetchSubmissionForContext(ctx)
+  async run(ctx: CommandContext): Promise<void> {
+    const submission = await fetchSubmissionForContext(ctx);
 
     if (!submission) {
-      return
+      return;
     }
 
-    const subcommand = ctx.subcommands[0]
+    const subcommand = ctx.subcommands[0];
 
     // This would be a Discord API failure
-    assert(!!subcommand, 'subcommand was not set')
+    assert(!!subcommand, "subcommand was not set");
 
     if (!isValidated(submission)) {
       commandLog.warning({
-        type: 'text',
+        type: "text",
         content:
-          'Cannot use drafts on a submission with warnings, or a paused submission, please resolve issues and retry.',
-        ctx
-      })
-      return
+          "Cannot use drafts on a submission with warnings, or a paused submission, please resolve issues and retry.",
+        ctx,
+      });
+      return;
     }
 
     switch (subcommand) {
-      case 'add':
-        await this.addNewDraft(ctx, submission)
-        return
-      case 'view':
-        await this.viewCurrentDraft(ctx, submission)
-        return
-      case 'clear':
-        await this.clearCurrentDraft(ctx, submission)
-        return
-      case 'history':
-        await this.viewDraftHistory(ctx, submission)
+      case "add":
+        await this.addNewDraft(ctx, submission);
+        return;
+      case "view":
+        await this.viewCurrentDraft(ctx, submission);
+        return;
+      case "clear":
+        await this.clearCurrentDraft(ctx, submission);
+        return;
+      case "history":
+        await this.viewDraftHistory(ctx, submission);
     }
   }
 
-  async viewDraftHistory (
+  async viewDraftHistory(
     ctx: CommandContext,
     submission: ValidatedSubmission
   ): Promise<void> {
-    const drafts = submission.drafts.reverse()
-    let currentIdx = 0
+    const drafts = submission.drafts.reverse();
+    let currentIdx = 0;
 
     if (!drafts.length) {
       commandLog.error({
-        type: 'text',
-        content: 'No draft set.',
-        ctx
-      })
-      return
+        type: "text",
+        content: "No draft set.",
+        ctx,
+      });
+      return;
     }
 
     const generateDraftString = (draft: Draft): string => {
@@ -108,10 +108,10 @@ export default class DraftCommand extends SlashCommand {
 ${draft.content}
 
 id: ${draft.id}
-author: @${draft.author.user.name}
-timestamp: ${time(draft.timestamp, 'f')} (${time(draft.timestamp, 'R')})
-      `
-    }
+author: @${draft.author.user.username}
+timestamp: ${time(draft.timestamp, "f")} (${time(draft.timestamp, "R")})
+      `;
+    };
 
     await ctx.send({
       content: generateDraftString(drafts[0]),
@@ -121,177 +121,174 @@ timestamp: ${time(draft.timestamp, 'f')} (${time(draft.timestamp, 'R')})
           components: [
             {
               type: ComponentType.BUTTON,
-              custom_id: 'previous',
-              label: 'Previous',
-              style: ButtonStyle.PRIMARY
+              custom_id: "previous",
+              label: "Previous",
+              style: ButtonStyle.PRIMARY,
             },
             {
               type: ComponentType.BUTTON,
-              custom_id: 'clear',
-              label: 'Clear',
-              style: ButtonStyle.DESTRUCTIVE
+              custom_id: "clear",
+              label: "Clear",
+              style: ButtonStyle.DESTRUCTIVE,
             },
             {
               type: ComponentType.BUTTON,
-              custom_id: 'next',
-              label: 'Next',
-              style: ButtonStyle.PRIMARY
-            }
-          ]
-        }
-      ]
-    })
+              custom_id: "next",
+              label: "Next",
+              style: ButtonStyle.PRIMARY,
+            },
+          ],
+        },
+      ],
+    });
 
-    const message = await ctx.fetch()
+    const message = await ctx.fetch();
 
-    ctx.registerComponentFrom(message.id, 'previous', (bctx) => {
+    ctx.registerComponentFrom(message.id, "previous", (bctx) => {
       if (currentIdx === 0) {
         // Skip to last
-        currentIdx = drafts.length - 1
+        currentIdx = drafts.length - 1;
       } else {
-        currentIdx -= 1
+        currentIdx -= 1;
       }
 
       void runCatching(async () => {
-        await bctx.acknowledge()
+        await bctx.acknowledge();
 
         await message.edit({
           content: generateDraftString(drafts[currentIdx]),
-          ...DEFAULT_MESSAGE_OPTS_SLASH
-        })
-      }, 'rethrow')
-    })
+          ...DEFAULT_MESSAGE_OPTS_SLASH,
+        });
+      }, "rethrow");
+    });
 
-    ctx.registerComponentFrom(message.id, 'next', (bctx) => {
+    ctx.registerComponentFrom(message.id, "next", (bctx) => {
       if (currentIdx === drafts.length - 1) {
         // Skip to front
-        currentIdx = 0
+        currentIdx = 0;
       } else {
-        currentIdx += 1
+        currentIdx += 1;
       }
 
       void runCatching(async () => {
-        await bctx.acknowledge()
+        await bctx.acknowledge();
 
         await message.edit({
           content: generateDraftString(drafts[currentIdx]),
-          ...DEFAULT_MESSAGE_OPTS_SLASH
-        })
-      }, 'rethrow')
-    })
+          ...DEFAULT_MESSAGE_OPTS_SLASH,
+        });
+      }, "rethrow");
+    });
 
-    ctx.registerComponentFrom(message.id, 'clear', () => {
-      void runCatching(async () => await message.delete(), 'rethrow')
-    })
+    ctx.registerComponentFrom(message.id, "clear", () => {
+      void runCatching(async () => await message.delete(), "rethrow");
+    });
   }
 
-  async clearCurrentDraft (
+  async clearCurrentDraft(
     ctx: CommandContext,
     submission: ValidatedSubmission
   ): Promise<void> {
     // TODO: confirmation?
 
-    const hasDraft = submission.drafts.length > 0
+    const hasDraft = submission.drafts.length > 0;
 
     if (!hasDraft) {
       commandLog.error({
-        type: 'text',
-        content: 'No draft set.',
-        ctx
-      })
-      return
+        type: "text",
+        content: "No draft set.",
+        ctx,
+      });
+      return;
     }
 
-    const id = submission.drafts[0].id
-    await deleteDraft(id)
+    const id = submission.drafts[0].id;
+    await deleteDraft(id);
 
     commandLog.info({
-      type: 'text',
+      type: "text",
       content: `Deleted draft ${id}.`,
-      ctx
-    })
+      ctx,
+    });
   }
 
-  async addNewDraft (
+  async addNewDraft(
     ctx: CommandContext,
     submission: ValidatedSubmission
   ): Promise<void> {
     const oldValue =
       submission.drafts[0]?.content ??
-      `<@${submission.authorId}>, unfortunately, your project has been rejected.`
+      `<@${submission.authorId}>, unfortunately, your project has been rejected.`;
 
     await ctx.sendModal(
       {
-        title: 'Draft rejection message',
+        title: "Draft rejection message",
         components: [
           {
             type: ComponentType.ACTION_ROW,
             components: [
               {
                 type: ComponentType.TEXT_INPUT,
-                label: 'Draft',
+                label: "Draft",
                 style: TextInputStyle.PARAGRAPH,
-                custom_id: 'newValue',
-                value: oldValue
-              }
-            ]
-          }
-        ]
+                custom_id: "newValue",
+                value: oldValue,
+              },
+            ],
+          },
+        ],
       },
       (mctx) => {
-        const { newValue } = mctx.values
+        const { newValue } = mctx.values;
         logger.debug(
           `Adding draft ${newValue} to submission ${stringify.submission(
             submission
           )}`
-        )
+        );
 
-        void createDraft(newValue, mctx.user.id, submission.id)
+        void createDraft(newValue, mctx.user.id, submission.id);
 
-        void runCatching(
-          async () => {
-            await mctx.send({
-              content: 'Added new draft successfully.'
-            })
+        void runCatching(async () => {
+          await mctx.send({
+            content: "Added new draft successfully.",
+          });
 
-            await mctx.sendFollowUp({
-              content: newValue
-            })
-          },
-          'rethrow'
-        )
+          await mctx.sendFollowUp({
+            content: newValue,
+          });
+        }, "rethrow");
       }
-    )
+    );
   }
 
-  async viewCurrentDraft (
+  async viewCurrentDraft(
     ctx: CommandContext,
     submission: ValidatedSubmission
   ): Promise<void> {
-    const current = submission.drafts[0]
+    const current = submission.drafts[0];
 
     if (!current) {
       commandLog.error({
-        type: 'text',
-        content: 'No draft set.',
-        ctx
-      })
-      return
+        type: "text",
+        content: "No draft set.",
+        ctx,
+      });
+      return;
     }
 
     commandLog.info({
-      type: 'text',
+      type: "text",
       content: `
 ${current.content}
 
 id: ${current.id}
-author: @${current.author.user.name}
-timestamp: ${time(current.timestamp, 'f')} (${time(current.timestamp, 'R')})
+author: @${current.author.user.username}
+timestamp: ${time(current.timestamp, "f")} (${time(current.timestamp, "R")})
 `,
       ctx,
       extraOpts: {
-        ephemeral: false
-      }
-    })
+        ephemeral: false,
+      },
+    });
   }
 }
