@@ -15,7 +15,8 @@ export default class RevalidateCommand extends SlashCommand {
   constructor (creator: SlashCreator) {
     super(creator, {
       name: 'revalidate',
-      description: 'Revalidate a submission, removing warnings if it is successful.',
+      description:
+        'Revalidate a submission, removing warnings if it is successful.',
       guildIDs: getAssignedGuilds({ includeMain: true })
     })
   }
@@ -73,7 +74,7 @@ export default class RevalidateCommand extends SlashCommand {
             },
             {
               name: 'Author',
-              value: `<@${validated.author.id}> (${validated.author.user.tag}, ${validated.author.id})`
+              value: `<@${validated.author.id}> (@${validated.author.user.username}, ${validated.author.id})`
             }
           ]
         },

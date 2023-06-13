@@ -70,7 +70,7 @@ function createPublicEmbed (submission: CompletedSubmission): APIEmbed {
     .setURL(submission.links.source)
     .setTimestamp(new Date())
     .setAuthor({
-      name: submission.author.user.tag,
+      name: `@${submission.author.user.username}`,
       iconURL: submission.author.displayAvatarURL()
     })
     .setFields(
@@ -129,28 +129,32 @@ function createInitialEmbed (submission: ApiSubmission): APIEmbed {
 }
 
 function createProcessingEmbed (submission: ValidatedSubmission): APIEmbed {
-  const upvotes = submission.votes
-    .filter((v) => v.type === 'UPVOTE')
-    .map((v) => `${v.voter.user.tag}`)
-    .join('\n') || 'None'
+  const upvotes =
+    submission.votes
+      .filter((v) => v.type === 'UPVOTE')
+      .map((v) => `@${v.voter.user.username}`)
+      .join('\n') || 'None'
 
-  const downvotes = submission.votes
-    .filter((v) => v.type === 'DOWNVOTE')
-    .map((v) => `${v.voter.user.tag}`)
-    .join('\n') || 'None'
+  const downvotes =
+    submission.votes
+      .filter((v) => v.type === 'DOWNVOTE')
+      .map((v) => `@${v.voter.user.username}`)
+      .join('\n') || 'None'
 
-  const [,user, repo] = new URL(submission.links.source).pathname.split('/')
+  const [, user, repo] = new URL(submission.links.source).pathname.split('/')
   const vscDevURL = `https://vscode.dev/github/${user}/${repo}`
 
   return createEmbedBase(submission)
     .setFields(
       {
         name: 'Submitter',
-        value: `<@${submission.author.id}> (${submission.author.user.tag}, ${submission.authorId})`
+        value: `<@${submission.author.id}> (@${submission.author.user.username}, ${submission.authorId})`
       },
       {
         name: 'Source',
-        value: `${createClickableURLString(submission.links.source)} | [Open in vscode.dev](${vscDevURL})`
+        value: `${createClickableURLString(
+          submission.links.source
+        )} | [Open in vscode.dev](${vscDevURL})`
       },
       {
         name: 'Technologies',

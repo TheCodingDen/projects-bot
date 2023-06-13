@@ -108,7 +108,7 @@ export default class DraftCommand extends SlashCommand {
 ${draft.content}
 
 id: ${draft.id}
-author: ${draft.author.user.tag}
+author: @${draft.author.user.username}
 timestamp: ${time(draft.timestamp, 'f')} (${time(draft.timestamp, 'R')})
       `
     }
@@ -248,18 +248,15 @@ timestamp: ${time(draft.timestamp, 'f')} (${time(draft.timestamp, 'R')})
 
         void createDraft(newValue, mctx.user.id, submission.id)
 
-        void runCatching(
-          async () => {
-            await mctx.send({
-              content: 'Added new draft successfully.'
-            })
+        void runCatching(async () => {
+          await mctx.send({
+            content: 'Added new draft successfully.'
+          })
 
-            await mctx.sendFollowUp({
-              content: newValue
-            })
-          },
-          'rethrow'
-        )
+          await mctx.sendFollowUp({
+            content: newValue
+          })
+        }, 'rethrow')
       }
     )
   }
@@ -285,7 +282,7 @@ timestamp: ${time(draft.timestamp, 'f')} (${time(draft.timestamp, 'R')})
 ${current.content}
 
 id: ${current.id}
-author: ${current.author.user.tag}
+author: @${current.author.user.username}
 timestamp: ${time(current.timestamp, 'f')} (${time(current.timestamp, 'R')})
 `,
       ctx,

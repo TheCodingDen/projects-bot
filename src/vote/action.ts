@@ -92,7 +92,7 @@ export async function pause (
     type: 'embed',
     embed: {
       title: submission.name,
-      description: `**${vote.voter.user.tag}** **__PAUSED__** the submission for voting.`,
+      description: `**@${vote.voter.user.username}** **__PAUSED__** the submission for voting.`,
       fields: [...generateDefaultFields(submission, false)],
       color: config.colours().log.pause
     },
@@ -126,7 +126,7 @@ export async function unpause (
     type: 'embed',
     embed: {
       title: submission.name,
-      description: `**${vote.voter.user.tag}** **__UNPAUSED__** the submission for voting.`,
+      description: `**@${vote.voter.user.username}** **__UNPAUSED__** the submission for voting.`,
       fields: [...generateDefaultFields(submission, false)],
       color: config.colours().log.pause
     },
@@ -171,7 +171,7 @@ export async function accept (
     type: 'embed',
     embed: {
       title: submission.name,
-      description: `**${vote.voter.user.tag}** **__ACCEPTED__** the submission.`,
+      description: `**@${vote.voter.user.username}** **__ACCEPTED__** the submission.`,
       fields: [
         ...generateDefaultFields(submission),
         ...generateVoteFields(submission.votes)
@@ -223,9 +223,13 @@ export async function reject (
     .filter((v) => !v.bot)
     .map((v) => `<@${v.id}>`)
 
-  const { message: reviewerMessage, thread: feedbackThread } = await sendMessageToFeedbackThread({
-    content: formattedReviewers.join(', ')
-  }, submission)
+  const { message: reviewerMessage, thread: feedbackThread } =
+    await sendMessageToFeedbackThread(
+      {
+        content: formattedReviewers.join(', ')
+      },
+      submission
+    )
 
   await reviewerMessage.delete()
 
@@ -245,7 +249,7 @@ export async function reject (
     type: 'embed',
     embed: {
       title: submission.name,
-      description: `**${vote.voter.user.tag}** **__REJECTED__** the submission.`,
+      description: `**@${vote.voter.user.username}** **__REJECTED__** the submission.`,
       fields: [
         ...generateDefaultFields(submission),
         ...generateVoteFields(submission.votes)
@@ -327,26 +331,27 @@ export async function forceReject (
   if (isValidated(submission)) {
     fields = generateDefaultFields(submission, true)
   } else {
-    fields =
-    [{
-      name: 'ID',
-      value: submission.id
-    },
-    {
-      name: 'Source',
-      value: submission.links.source
-    },
-    {
-      name: 'Author',
-      value: `<@${submission.authorId}> (${submission.authorId})`
-    }]
+    fields = [
+      {
+        name: 'ID',
+        value: submission.id
+      },
+      {
+        name: 'Source',
+        value: submission.links.source
+      },
+      {
+        name: 'Author',
+        value: `<@${submission.authorId}> (${submission.authorId})`
+      }
+    ]
   }
 
   privateLog.info({
     type: 'embed',
     embed: {
       title: submission.name,
-      description: `**${voter.user.tag}** **__FORCE-REJECTED__** the submission.\n Reason: **${template.prettyValue}**`,
+      description: `**@${voter.user.username}** **__FORCE-REJECTED__** the submission.\n Reason: **${template.prettyValue}**`,
       fields,
       color: config.colours().log.denied
     },
@@ -435,9 +440,9 @@ function generateVoteFields (votes: Vote[]): [EmbedField, EmbedField] {
   const downvotes = votes.filter((v) => v.type === 'DOWNVOTE')
 
   const upvoteString =
-    upvotes.map((v) => `${v.voter.user.tag}`).join('\n') || 'None'
+    upvotes.map((v) => `@${v.voter.user.username}`).join('\n') || 'None'
   const downvoteString =
-    downvotes.map((v) => `${v.voter.user.tag}`).join('\n') || 'None'
+    downvotes.map((v) => `@${v.voter.user.username}`).join('\n') || 'None'
 
   return [
     {

@@ -1,10 +1,18 @@
 import assert from 'assert'
-import { SlashCommand, SlashCreator, CommandContext, CommandOptionType } from 'slash-create'
+import {
+  SlashCommand,
+  SlashCreator,
+  CommandContext,
+  CommandOptionType
+} from 'slash-create'
 import { commandLog } from '../communication/interaction'
 import { internalLog } from '../communication/internal'
 import { privateLog } from '../communication/private'
 import config from '../config'
-import { fetchAnySubmissionByThreadId, updateSubmissionState } from '../db/submission'
+import {
+  fetchAnySubmissionByThreadId,
+  updateSubmissionState
+} from '../db/submission'
 import { isCompleted, isValidated } from '../types/submission'
 import { getAssignedGuilds } from '../utils/discordUtils'
 import { runCatching } from '../utils/request'
@@ -99,7 +107,8 @@ export default class CleanupCommand extends SlashCommand {
     } else {
       commandLog.error({
         type: 'text',
-        content: 'Could not cleanup, channel / message unavailable, please delete manually.',
+        content:
+          'Could not cleanup, channel / message unavailable, please delete manually.',
         ctx
       })
     }
@@ -120,7 +129,11 @@ export default class CleanupCommand extends SlashCommand {
           },
           {
             name: 'Author',
-            value: `<@${submission.authorId}> (${isValidated(submission) ? submission.author.user.tag : 'Unknown#0000'}, ${submission.authorId})`
+            value: `<@${submission.authorId}> (${
+              isValidated(submission)
+                ? `@${submission.author.user.username}`
+                : '@unknown-user'
+            }, ${submission.authorId})`
           }
         ],
         color: config.colours().log.info
