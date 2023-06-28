@@ -1,3 +1,4 @@
+import assert from 'assert'
 import { ChannelType, ThreadChannel } from 'discord.js'
 import { SlashCommand, SlashCreator, CommandContext } from 'slash-create'
 import { commandLog } from '../communication/interaction'
@@ -6,7 +7,7 @@ import {
   updateFeedbackThreadId,
   validatePendingSubmission
 } from '../db/submission'
-import { fetchSubmissionForContext } from '../utils/commands'
+import { fetchAnySubmissionForContext } from '../utils/commands'
 import { getAssignedGuilds } from '../utils/discordUtils'
 import { runCatching } from '../utils/request'
 
@@ -21,13 +22,16 @@ export default class ThreadCommand extends SlashCommand {
   }
 
   async run (ctx: CommandContext): Promise<void> {
-    const submission = await fetchSubmissionForContext(ctx)
+    const submission = await fetchAnySubmissionForContext(ctx)
 
     if (!submission) {
       return
     }
 
     let existingThread: ThreadChannel | undefined
+
+    // Running commands in a thread with a raw submission should be impossible
+    assert(submission.state !== 'RAW', 'submission was in raw state')
 
     if (submission.state === 'ERROR') {
       commandLog.warning({
@@ -36,6 +40,28 @@ export default class ThreadCommand extends SlashCommand {
           'Cannot create a thread for a project in an error state, please resolve the errors and retry.',
         ctx
       })
+      return
+    }
+
+    if (submission.state === 'ACCEPTED' || submission.state === 'DENIED') {
+      const { feedbackThread } = submission
+      if (!feedbackThread) {
+        commandLog.warning({
+          type: 'text',
+          content:
+          'Cannot add you, no thread exists.',
+          ctx
+        })
+        return
+      }
+
+      await runCatching(
+        async () =>
+          await (feedbackThread)
+            .send({ content: ctx.user.mention })
+            .then(async (msg) => await msg.delete()),
+        'rethrow'
+      )
       return
     }
 
@@ -85,6 +111,10 @@ export default class ThreadCommand extends SlashCommand {
         }),
       'rethrow'
     )
+
+    // We checked for the states above, this just lets TS infer it so we don't have any casting.
+    assert(submission.state === 'PROCESSING' || submission.state === 'PAUSED' || submission.state === 'WARNING', 'impossible')
+
     await updateFeedbackThreadId(submission, feedbackThread.id)
 
     await runCatching(
