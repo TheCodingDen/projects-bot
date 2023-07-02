@@ -76,8 +76,9 @@ export interface CompletedSubmission extends BaseSubmission {
   id: Cuid
   submittedAt: Date
 
-  // Author may no longer exist when we fetch in this state
-  author?: GuildMember
+  // Author / thread may no longer exist when we fetch in this state
+  author: GuildMember | undefined
+  feedbackThread: ThreadChannel | undefined
 }
 
 // These type guards exist for more readable code, and better TS behavior

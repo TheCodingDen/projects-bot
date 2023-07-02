@@ -212,6 +212,16 @@ export async function fetchSubmissionByMessageId (
     // from button votes, whereby the author must exist
     const author = await fetchAuthor(data.authorId)
 
+    // May or may not exist, do not abort if it does not
+    let feedbackThread
+    if (data.feedbackThreadId) {
+      try {
+        feedbackThread = await fetchFeedbackThread(data.feedbackThreadId)
+      } catch {
+        logger.warn(`Feedback thread for submission (message ID ${id}) did not exist`)
+      }
+    }
+
     const completed: CompletedSubmission = {
       ...data,
       state: data.state,
@@ -221,7 +231,8 @@ export async function fetchSubmissionByMessageId (
         source: data.sourceLinks,
         other: data.otherLinks
       },
-      author
+      author,
+      feedbackThread
     }
 
     return completed
@@ -385,11 +396,12 @@ async function resolvePrismaData (
 
   logger.trace('API requests successful')
 
-  const submission: AnySubmission = {
+  const submission = {
     ...data,
     state: data.state,
 
     feedbackThread,
+    author: undefined,
     tech: data.techUsed,
     links: {
       other: data.otherLinks,
