@@ -283,6 +283,7 @@ export async function forceReject (
   )
 
   let shouldRunCleanup
+  let feedbackThread
   const logLocation = template.location()
 
   try {
@@ -308,12 +309,16 @@ export async function forceReject (
         user: `<@${submission.authorId}>`,
         name: submission.name
       })
-      await sendMessageToFeedbackThread(
+      const result = await sendMessageToFeedbackThread(
         {
           content: templatedReason
         },
         submission
       )
+
+      if (result.didMakeThread) {
+        feedbackThread = result.thread
+      }
 
       shouldRunCleanup = true
     } else {
@@ -329,6 +334,9 @@ export async function forceReject (
   let fields
 
   if (isValidated(submission)) {
+    // Mutation of submissions is generally ill advised, but this is only for logging, it does not change the real state.
+    // The state has already been established in the database, so this only brings the object and DB in sync
+    submission.feedbackThread = feedbackThread
     fields = generateDefaultFields(submission, true)
   } else {
     fields = [
