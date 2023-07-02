@@ -55,14 +55,7 @@ export default class ThreadCommand extends SlashCommand {
         return
       }
 
-      await runCatching(
-        async () =>
-          await (feedbackThread)
-            .send({ content: ctx.user.mention })
-            .then(async (msg) => await msg.delete()),
-        'rethrow'
-      )
-      return
+      existingThread = feedbackThread
     }
 
     if (submission.state === 'PROCESSING' || submission.state === 'PAUSED') {
