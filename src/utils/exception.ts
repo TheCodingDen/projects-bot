@@ -6,11 +6,11 @@ import { internalLog } from '../communication/internal'
  */
 export function setup (): void {
   process.setUncaughtExceptionCaptureCallback(err => {
+    logger.error(err)
     internalLog.error({
       type: 'text',
       content: `Encountered uncaught exception: ${err.message} \n ${err.stack}`,
       ctx: undefined
     })
-    logger.error(err)
   })
 }
