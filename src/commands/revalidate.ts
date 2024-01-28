@@ -55,7 +55,10 @@ export default class RevalidateCommand extends SlashCommand {
       commandLog.info({
         type: 'text',
         content: 'Cleared warnings successfully.',
-        ctx
+        ctx,
+        extraOpts: {
+          ephemeral: false
+        }
       })
 
       privateLog.info({
