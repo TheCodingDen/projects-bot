@@ -191,7 +191,7 @@ function createPendingEmbed (submission: PendingSubmission): APIEmbed {
     .setFields(
       {
         name: 'Submitter',
-        value: `Unknown#0000 (${submission.authorId})`
+        value: `<@${submission.authorId}> (${submission.authorId})`
       },
       {
         name: 'Source',
