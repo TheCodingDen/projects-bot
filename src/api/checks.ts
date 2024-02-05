@@ -5,6 +5,7 @@ import config from '../config'
 import { query } from '../db/client'
 import { ApiSubmission, ValidatedSubmission } from '../types/submission'
 import { runCatching } from '../utils/request'
+import { Submission } from '@prisma/client'
 
 interface RequiredValuesOk {
   author: GuildMember
@@ -75,13 +76,18 @@ export async function runNonCriticalChecks (
 ): Promise<boolean> {
   let result = true
 
-  const isDuplicate = await checkForDuplicate(submission)
+  const duplicateSubmissions = await listDuplicates(submission)
+  const isDuplicate = duplicateSubmissions.length > 0
 
   if (isDuplicate) {
+    let duplicateContent = 'Possible duplicate submission detected, matched submission links. Matches:\n'
+    for (const duplicate of duplicateSubmissions) {
+      duplicateContent += `  ${duplicate.name} [${duplicate.sourceLinks}] (<#${duplicate.reviewThreadId}>)\n`
+    }
+
     genericLog.warning({
       type: 'text',
-      content:
-        'Possible duplicate submission detected, matched submission links.',
+      content: duplicateContent,
       ctx: submission.reviewThread
     })
 
@@ -111,11 +117,11 @@ export async function runNonCriticalChecks (
   return result
 }
 
-async function checkForDuplicate (
+async function listDuplicates (
   submission: ValidatedSubmission
-): Promise<boolean> {
-  const count = await query(async (db) =>
-    await db.submission.count({
+): Promise<Submission[]> {
+  const duplicates = await query(async (db) =>
+    await db.submission.findMany({
       where: {
         AND: [
           {
@@ -129,13 +135,16 @@ async function checkForDuplicate (
             }
           }
         ]
+      },
+      // Order by the submission date
+      orderBy: {
+        submittedAt: 'desc'
       }
     })
   )
 
-  // We insert the submission before this code runs, so we count how many match
-  // and if it is > 1, that means there's a duplicate somewhere
-  return count > 1
+  // We insert the submission before this code runs, so we slice the first element off.
+  return duplicates.slice(1)
 }
 
 const ghClient = new GraphQLClient('https://api.github.com/graphql')
