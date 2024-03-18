@@ -265,6 +265,21 @@ export async function reject (
   }
 }
 
+interface RejectionOk {
+  outcome: 'success'
+}
+
+interface RejectionErr {
+  outcome: 'error'
+  message: string
+}
+
+interface RejectionCleanupNotRun {
+  outcome: 'cleanup-not-run'
+}
+
+export type RejectionResult = RejectionOk | RejectionErr | RejectionCleanupNotRun
+
 /**
  * Forcefully reject a submission, this will run cleanup for the submission.
  */
@@ -273,7 +288,7 @@ export async function forceReject (
   // Could be in the pending state, we will just ignore warnings if that is the case
   submission: ValidatedSubmission | PendingSubmission,
   template: RejectionTemplate
-): Promise<VoteModificationResult> {
+): Promise<RejectionResult> {
   // Do not allow paused submissions to be rejected, this should be checked by the caller
   // Errored submissions are acceptable because invalid-id cases will be in the error state
   // This case should be validated by callers
@@ -295,6 +310,7 @@ export async function forceReject (
         user: `<@${submission.authorId}>`,
         name: submission.name
       })
+
       await runCatching(
         async () =>
           await publicLogs.send({
@@ -326,7 +342,7 @@ export async function forceReject (
     }
   } catch (err) {
     return {
-      error: true,
+      outcome: 'error',
       message: `Failed to send rejection message: ${err}`
     }
   }
@@ -366,12 +382,11 @@ export async function forceReject (
     ctx: submission
   })
 
+  await updateSubmissionState(submission, 'DENIED')
+
   if (!shouldRunCleanup) {
-    // Not an ideal abort from here, but it's the easiest way to go about it.
-    // This is an extreme edge case for the API design to handle.
     return {
-      error: true,
-      message: 'didnt-run-cleanup'
+      outcome: 'cleanup-not-run'
     }
   }
 
@@ -383,8 +398,7 @@ export async function forceReject (
     }, 'suppress')
 
     return {
-      error: false,
-      outcome: 'instant-reject'
+      outcome: 'success'
     }
   }
 
@@ -401,8 +415,7 @@ export async function forceReject (
     }, 'suppress')
 
     return {
-      error: false,
-      outcome: 'instant-reject'
+      outcome: 'success'
     }
   }
 
