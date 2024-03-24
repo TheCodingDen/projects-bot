@@ -98,17 +98,21 @@ export default class RejectCommand extends SlashCommand {
 
     const rejectionResult = await forceReject(member, submission, template)
 
-    if (rejectionResult.error) {
-      if (rejectionResult.message === 'didnt-run-cleanup' && template.location() === 'thread') {
+    if (rejectionResult.outcome !== 'success') {
+      // Cleanup was not selected to run. This is controlled by the templates (public templates are not cleaned up)
+      if (rejectionResult.outcome === 'cleanup-not-run') {
         return commandLog.info({
           type: 'text',
-          content: 'Could not cleanup, submission was errored. Please cleanup manually.',
+          content: `Did not clean up the project messages/threads, that operation is not applicable for the chosen template. 
+Please clean up manually by closing the thread, and deleting the submission message.`,
           ctx,
           extraOpts: {
             ephemeral: false
           }
         })
       }
+
+      // The template actually hit an error, log it and tell users to send the message themselves
 
       const templatedReason = template.execute({
         user: `<@${submission.authorId}>`,
@@ -132,13 +136,6 @@ export default class RejectCommand extends SlashCommand {
         content: rejectionResult.message,
         ctx: submission
       })
-
-      return
     }
-
-    assert(
-      rejectionResult.outcome === 'instant-reject',
-      'result did not have outcome instant-reject'
-    )
   }
 }
