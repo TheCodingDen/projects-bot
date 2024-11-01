@@ -28,7 +28,7 @@ const rejectionValues: RejectionTemplate[] = [
     key: 'no-license',
     enumValue: { name: 'No license', value: 'no-license' },
     prettyValue: 'No license',
-    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and then resubmit. See <https://choosealicense.com/> for more information`,
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because it does not contain a valid LICENSE, LICENSE.txt or LICENSE.md file. Please add a license to your project and then resubmit. See <https://choosealicense.com/> for more information`,
     location: () => 'thread'
   },
   {
@@ -63,7 +63,7 @@ const rejectionValues: RejectionTemplate[] = [
     key: 'invalid-id',
     enumValue: { name: 'Invalid user ID', value: 'invalid-id' },
     prettyValue: 'Invalid user ID',
-    execute: ({ name }: RejectionParams) => `To whomever submitted "${name}", the provided ID was invalid. Please provide us with your ID so we can process your submission. For help with getting your ID, see <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`,
+    execute: ({ name }: RejectionParams) => `To whoever submitted "${name}", the provided ID was invalid. Please provide us with your ID so we can process your submission. For help with getting your ID, see <https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->`,
     location: () => 'public'
   },
   {
