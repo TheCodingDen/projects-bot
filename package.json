@@ -12,23 +12,22 @@
     "build": "tsc",
     "build:watch": "tsc --watch --preserveWatchOutput",
     "cleaner": "ts-cleaner --dist lib --watch",
-    "sync": "slash-up sync",
     "sync:dev": "slash-up sync -e development",
-    "build:ci": "prisma generate && tsc",
+    "sync:prod": "slash-up sync --debug",
     "lint": "eslint . --ext .ts",
     "lint:fix": "npm run lint -- --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "prepare": "husky install",
-    "deploy:form": "clasp push",
-    "heroku-postbuild": "prisma migrate deploy && npm run build:ci",
+    "deploy-form": "clasp push",
+    "deploy-migrations": "prisma migrate deploy",
     "doc": "typedoc --out docs src"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TheCodingDen/projects-bot.git"
   },
-  "author": "Linus Willner <hello@linuswillner.me> (https://linuswillner.me)",
+  "author": "The Coding Den",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/TheCodingDen/projects-bot/issues"
