@@ -94,7 +94,7 @@ export async function runNonCriticalChecks (
     result = false
   }
 
-  if (submission.author.roles.cache.has(config.roles().establishedMember)) {
+  if (!submission.author.roles.cache.has(config.roles().establishedMember)) {
     genericLog.warning({
       type: 'text',
       content: 'Submitter does not appear to have Established Member role. Check and reject as neccesary.',
