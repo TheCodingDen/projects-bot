@@ -108,7 +108,7 @@ const rejectionValues: RejectionTemplate[] = [
     key: 'role-requirement',
     enumValue: { name: 'Role requirement', value: 'role-requirement' },
     prettyValue: 'Required role is missing',
-    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because you lack the VC Access role.`,
+    execute: ({ user }: RejectionParams) => `${user}, your project has been rejected because you lack the Established Member role. You are welcome to resubmit the project once you have the role.`,
     location: () => 'thread'
   }
 ]
@@ -160,6 +160,7 @@ const config = {
    */
   roles: () => ({
     veterans: env.role('VETERANS_ROLE_ID', env.guild(process.env.NODE_ENV === 'production' ? 'MAIN_GUILD_ID' : 'DEVELOPMENT_GUILD_ID')),
+    establishedMember: '889228904622075925',
     staff: env.role('STAFF_ROLE_ID', env.guild(process.env.NODE_ENV === 'production' ? 'MAIN_GUILD_ID' : 'DEVELOPMENT_GUILD_ID'))
   }),
   /**

@@ -94,6 +94,16 @@ export async function runNonCriticalChecks (
     result = false
   }
 
+  if (!submission.author.roles.cache.has(config.roles().establishedMember)) {
+    genericLog.warning({
+      type: 'text',
+      content: 'Submitter does not appear to have Established Member role. Check and reject as neccesary.',
+      ctx: submission.reviewThread
+    })
+
+    result = false
+  }
+
   if (isGitHubSource(submission)) {
     const licenseRes = await runGitHubChecks(submission)
 
