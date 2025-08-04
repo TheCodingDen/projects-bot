@@ -41,7 +41,7 @@
     "discord.js": "^14.8.0",
     "dotenv-safe": "^8.2.0",
     "fastify": "^3.29.4",
-    "graphql": "^16.5.0",
+    "graphql": "^16.8.1",
     "graphql-request": "^4.3.0",
     "koa": "^2.13.4",
     "pino": "^8.1.0",
